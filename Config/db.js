@@ -1,7 +1,7 @@
 const mysql = require('mysql');
 
 const connection = mysql.createConnection({
-    host: 'gislive.isoftuthh.com',
+    host: '193.203.166.102',
     user: 'u666156220_yarelih',
     password: 'Yareli1211',
     database: 'u666156220_bdgislive' 
