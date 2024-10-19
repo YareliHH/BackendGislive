@@ -1,10 +1,10 @@
 const mysql = require('mysql');
 
 const connection = mysql.createConnection({
-    host: 'localhost',
-    user: 'root',
-    password: '',
-    database: 'bdgislive' 
+    host: 'gislive.isoftuthh.com',
+    user: 'u666156220_yarelih',
+    password: 'Yareli1211',
+    database: 'u666156220_bdgislive' 
 });
 
 connection.connect((err) => {
