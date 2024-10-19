@@ -2,8 +2,8 @@ const mysql = require('mysql');
 
 const connection = mysql.createConnection({
     host: 'localhost',
-    user: 'Yareli',
-    password: 'Yareli11',
+    user: 'root',
+    password: '',
     database: 'bdgislive' 
 });
 
