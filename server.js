@@ -6,10 +6,7 @@ const login = require('./routes/CRUDuser.js'); // Importa el archivo CRUDregistr
 
 const app = express();
 
-app.use(cors({
-    origin: 'https://gislive.isoftuthh.com',
-    credentials: true
-  }));
+app.use(cors());
 app.use(bodyParser.json());
 
 app.use('/api', Registrer); 

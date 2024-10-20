@@ -1,13 +1,18 @@
 const mysql = require('mysql');
 
-const connection = mysql.createConnection({
+const pool = mysql.createPool({
     host: '193.203.166.102',
     user: 'u666156220_yarelih',
     password: 'Yareli1211',
-    database: 'u666156220_bdgislive' 
+    database: 'u666156220_bdgislive',
+    port: 3306,
+    waitForConnections: true,
+    connectionLimit: 5,
+    queueLimit: 0,
+
 });
 
-connection.connect((err) => {
+pool.getConnection((err) => {
     if (err) {
         console.error('Error conectando a la base de datos:', err);
     } else {
@@ -15,4 +20,4 @@ connection.connect((err) => {
     }
 });
 
-module.exports = connection;
+module.exports = pool;
