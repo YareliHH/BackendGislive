@@ -4,6 +4,9 @@ const connection = require('../Config/db');
 const bcrypt = require('bcryptjs'); // Importar bcrypt para comparar contraseñas
 const axios = require('axios'); // Para hacer la solicitud a Google reCAPTCHA
 
+const MAX_ATTEMPTS = 5; // Número máximo de intentos fallidos
+const LOCK_TIME_MINUTES = 20; // Tiempo de bloqueo en minutos
+
 // Tu clave secreta de reCAPTCHA, obtenida desde el panel de Google
 const RECAPTCHA_SECRET_KEY = '6LcKwWEqAAAAAN5jWmdv3NLpvl6wSeIRRnm9Omjq';
 

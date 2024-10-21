@@ -3,9 +3,6 @@ const router = express.Router();
 const db = require('../Config/db'); // Conexión a la base de datos desde db.js
 const nodemailer = require('nodemailer');
 
-const MAX_ATTEMPTS = 5; // Número máximo de intentos fallidos
-const LOCK_TIME_MINUTES = 20; // Tiempo de bloqueo en minutos
-
 // Configuración de nodemailer
 const transporter = nodemailer.createTransport({
     service: 'gmail',
@@ -98,24 +95,25 @@ router.post('/send-verification-email', (req, res) => {
              const mailOptions = {
                 from: 'Jehiely_24@hotmail.com',
                 to: email,
-                subject: 'Verificación de Correo - Gislive Boutique',
+                subject: 'Confirmación de Correo - Gislive Boutique',
                 html: `
                     <div style="font-family: Arial, sans-serif; color: #333;">
                         <div style="text-align: center; padding: 20px;">
                             <h1 style="color: #1976d2;">Gislive Boutique</h1>
-                            <p>Bienvenido</p>
-                            <p>Gracias por registrarte en <b>Gislive Boutique</b>. Para completar tu registro, por favor verifica tu correo electrónico utilizando el siguiente código:</p>
+                            <p>Hola y bienvenido</p>
+                            <p>Agradecemos que te hayas registrado en <b>Gislive Boutique</b>. Para finalizar tu registro, por favor confirma tu dirección de correo electrónico usando el siguiente código:</p>
                             <div style="padding: 10px; background-color: #f0f0f0; border-radius: 5px; display: inline-block; margin: 20px 0;">
                                 <span style="font-size: 24px; font-weight: bold; color: #1976d2;">${verificationToken}</span>
                             </div>
-                            <p>Ingresa este código en la página de verificación de tu cuenta.</p>
-                            <p style="color: #d32f2f; font-weight: bold; font-size: 18px;">El token debe ser copiado tal y como está, respetando mayúsculas, minúsculas y guiones.</p>
-                            <p><b>Nota:</b> Este código caduca en 15 minutos.</p>
+                            <p>Introduce este código en la página de confirmación de tu cuenta.</p>
+                            <p style="color: #d32f2f; font-weight: bold; font-size: 18px;">El código debe ser ingresado exactamente como aparece, respetando mayúsculas, minúsculas y símbolos.</p>
+                            <p><b>Importante:</b> Este código expirará en 15 minutos.</p>
                             <hr style="margin: 20px 0;">
                         </div>
                     </div>
                 `,
             };
+            
 
             try {
                 await transporter.sendMail(mailOptions);
