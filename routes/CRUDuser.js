@@ -44,60 +44,84 @@ router.post('/login', async (req, res) => {
         const usuario = results[0];
         const currentTime = Date.now(); // Obtener la hora actual
 
-        // Verificar si el usuario está bloqueado
-        if (usuario.lock_until && currentTime < usuario.lock_until) {
-            const remainingTime = Math.round((usuario.lock_until - currentTime) / 60000); // Convertir ms a minutos
-            return res.status(403).json({ error: `Cuenta bloqueada. Inténtalo de nuevo en ${remainingTime} minutos.` });
-        }
-
-        // Comparar la contraseña usando bcrypt
-        bcrypt.compare(password, usuario.password, (err, isMatch) => {
+        // Verificar intentos de inicio de sesión fallidos y bloqueo desde la tabla de intentos de login
+        const queryAttempts = 'SELECT * FROM login_attempts WHERE usuarios_id = ?';
+        connection.query(queryAttempts, [usuario.id], (err, attemptsResult) => {
             if (err) {
-                console.error('Error al comparar contraseñas:', err);
-                return res.status(500).json({ error: 'Error al comparar contraseñas' });
+                console.error('Error al consultar los intentos de login:', err);
+                return res.status(500).json({ error: 'Error en la base de datos' });
             }
 
-            if (!isMatch) {
-                console.log('Contraseña incorrecta');
+            let loginAttempts = 0;
+            let lockUntil = null;
 
-                // Incrementar el número de intentos fallidos
-                let loginAttempts = usuario.login_attempts + 1;
-                let lockUntil = null;
+            if (attemptsResult.length > 0) {
+                const attempt = attemptsResult[0];
+                loginAttempts = attempt.intentos_fallidos;
+                lockUntil = attempt.fecha_bloqueo;
+            }
 
-                // Si los intentos fallidos alcanzan el máximo permitido, bloquear la cuenta
-                if (loginAttempts >= MAX_ATTEMPTS) {
-                    lockUntil = Date.now() + LOCK_TIME_MINUTES * 60 * 1000; // Tiempo de bloqueo en milisegundos
-                    loginAttempts = 0; // Reiniciar intentos después del bloqueo
+            // Verificar si el usuario está bloqueado
+            if (lockUntil && currentTime < lockUntil) {
+                const remainingTime = Math.round((lockUntil - currentTime) / 60000); // Convertir ms a minutos
+                return res.status(403).json({ error: `Cuenta bloqueada. Inténtalo de nuevo en ${remainingTime} minutos.` });
+            }
+
+            // Comparar la contraseña usando bcrypt
+            bcrypt.compare(password, usuario.password, (err, isMatch) => {
+                if (err) {
+                    console.error('Error al comparar contraseñas:', err);
+                    return res.status(500).json({ error: 'Error al comparar contraseñas' });
                 }
 
-                // Actualizar la base de datos con los intentos fallidos y el tiempo de bloqueo
-                const updateQuery = 'UPDATE usuarios SET login_attempts = ?, lock_until = ? WHERE correo = ?';
-                connection.query(updateQuery, [loginAttempts, lockUntil, email], (err) => {
-                    if (err) {
-                        console.error('Error al actualizar intentos de login:', err);
-                        return res.status(500).json({ error: 'Error al procesar el inicio de sesión' });
-                    }
-                    if (lockUntil) {
-                        return res.status(403).json({ error: `Cuenta bloqueada por ${LOCK_TIME_MINUTES} minutos debido a demasiados intentos fallidos.` });
-                    }
-                    return res.status(401).json({ error: 'Contraseña incorrecta' });
-                });
-            } else {
-                // Restablecer los intentos fallidos y el bloqueo si la autenticación es exitosa
-                const resetAttemptsQuery = 'UPDATE usuarios SET login_attempts = 0, lock_until = NULL WHERE correo = ?';
-                connection.query(resetAttemptsQuery, [email], (err) => {
-                    if (err) {
-                        console.error('Error al restablecer intentos de login:', err);
-                        return res.status(500).json({ error: 'Error al procesar el inicio de sesión' });
+                if (!isMatch) {
+                    console.log('Contraseña incorrecta');
+
+                    // Incrementar el número de intentos fallidos
+                    loginAttempts += 1;
+                    let newLockUntil = null;
+
+                    // Si los intentos fallidos alcanzan el máximo permitido, bloquear la cuenta
+                    if (loginAttempts >= MAX_ATTEMPTS) {
+                        newLockUntil = Date.now() + LOCK_TIME_MINUTES * 60 * 1000; // Tiempo de bloqueo en milisegundos
+                        loginAttempts = 0; // Reiniciar intentos después del bloqueo
                     }
 
-                    console.log('Autenticación exitosa');
-                    res.json({
-                        user: usuario.correo,  // Envía el correo del usuario autenticado
-                        tipo: usuario.tipo,     // Envía el tipo de usuario
+                    // Actualizar la tabla login_attempts con los intentos fallidos y el tiempo de bloqueo
+                    const updateAttemptsQuery = `
+                        INSERT INTO login_attempts (usuarios_id, intentos_fallidos, fecha_bloqueo)
+                        VALUES (?, ?, ?)
+                        ON DUPLICATE KEY UPDATE intentos_fallidos = ?, fecha_bloqueo = ?`;
+
+                    connection.query(updateAttemptsQuery, [usuario.id, loginAttempts, newLockUntil, loginAttempts, newLockUntil], (err) => {
+                        if (err) {
+                            console.error('Error al actualizar intentos de login:', err);
+                            return res.status(500).json({ error: 'Error al procesar el inicio de sesión' });
+                        }
+
+                        if (newLockUntil) {
+                            return res.status(403).json({ error: `Cuenta bloqueada por ${LOCK_TIME_MINUTES} minutos debido a demasiados intentos fallidos.` });
+                        }
+
+                        return res.status(401).json({ error: 'Contraseña incorrecta' });
                     });
-                });
-            }
+                } else {
+                    // Restablecer los intentos fallidos y el bloqueo si la autenticación es exitosa
+                    const resetAttemptsQuery = 'DELETE FROM login_attempts WHERE usuarios_id = ?';
+                    connection.query(resetAttemptsQuery, [usuario.id], (err) => {
+                        if (err) {
+                            console.error('Error al restablecer intentos de login:', err);
+                            return res.status(500).json({ error: 'Error al procesar el inicio de sesión' });
+                        }
+
+                        console.log('Autenticación exitosa');
+                        res.json({
+                            user: usuario.correo,  // Envía el correo del usuario autenticado
+                            tipo: usuario.tipo,     // Envía el tipo de usuario
+                        });
+                    });
+                }
+            });
         });
     });
 });
