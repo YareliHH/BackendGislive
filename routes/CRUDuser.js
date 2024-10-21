@@ -8,13 +8,13 @@ const axios = require('axios'); // Para hacer la solicitud a Google reCAPTCHA
 const RECAPTCHA_SECRET_KEY = '6LcKwWEqAAAAAN5jWmdv3NLpvl6wSeIRRnm9Omjq';
 
 router.post('/login', async (req, res) => {
-    const { email, password, captchaValue } = req.body; // Recibir el token de reCAPTCHA junto con email y password
+    const { email, password, captchaValue } = req.body;
 
     console.log('Datos recibidos del frontend:', { email, password, captchaValue });
 
     // Validar el reCAPTCHA antes de proceder con el login
     try {
-        const recaptchaResponse = await axios.post(`https://www.google.com/recaptcha/api/siteverify?secret=${RECAPTCHA_SECRET_KEY}&response=${captchaValue}`);
+        const recaptchaResponse = await axios.post(`https://www.google.com/recaptcha/api/siteverify?secret=6LcKwWEqAAAAAN5jWmdv3NLpvl6wSeIRRnm9Omjq&response=${captchaValue}`);
 
         if (!recaptchaResponse.data.success) {
             console.log('Fallo en la verificación de reCAPTCHA');
@@ -33,14 +33,19 @@ router.post('/login', async (req, res) => {
             return res.status(500).json({ error: 'Error en la base de datos' });
         }
 
-        console.log('Resultados de la consulta:', results);
         if (results.length === 0) {
             console.log('Usuario no encontrado:', email);
             return res.status(401).json({ error: 'Usuario no encontrado' });
         }
 
         const usuario = results[0];
-        console.log('Usuario encontrado en la base de datos:', usuario);
+        const currentTime = Date.now(); // Obtener la hora actual
+
+        // Verificar si el usuario está bloqueado
+        if (usuario.lock_until && currentTime < usuario.lock_until) {
+            const remainingTime = Math.round((usuario.lock_until - currentTime) / 60000); // Convertir ms a minutos
+            return res.status(403).json({ error: `Cuenta bloqueada. Inténtalo de nuevo en ${remainingTime} minutos.` });
+        }
 
         // Comparar la contraseña usando bcrypt
         bcrypt.compare(password, usuario.password, (err, isMatch) => {
@@ -51,14 +56,45 @@ router.post('/login', async (req, res) => {
 
             if (!isMatch) {
                 console.log('Contraseña incorrecta');
-                return res.status(401).json({ error: 'Contraseña incorrecta' });
-            }
 
-            console.log('Autenticación exitosa');
-            res.json({
-                user: usuario.correo,  // Envía el correo del usuario autenticado
-                tipo: usuario.tipo,     // Envía el tipo de usuario
-            });
+                // Incrementar el número de intentos fallidos
+                let loginAttempts = usuario.login_attempts + 1;
+                let lockUntil = null;
+
+                // Si los intentos fallidos alcanzan el máximo permitido, bloquear la cuenta
+                if (loginAttempts >= MAX_ATTEMPTS) {
+                    lockUntil = Date.now() + LOCK_TIME_MINUTES * 60 * 1000; // Tiempo de bloqueo en milisegundos
+                    loginAttempts = 0; // Reiniciar intentos después del bloqueo
+                }
+
+                // Actualizar la base de datos con los intentos fallidos y el tiempo de bloqueo
+                const updateQuery = 'UPDATE usuarios SET login_attempts = ?, lock_until = ? WHERE correo = ?';
+                connection.query(updateQuery, [loginAttempts, lockUntil, email], (err) => {
+                    if (err) {
+                        console.error('Error al actualizar intentos de login:', err);
+                        return res.status(500).json({ error: 'Error al procesar el inicio de sesión' });
+                    }
+                    if (lockUntil) {
+                        return res.status(403).json({ error: `Cuenta bloqueada por ${LOCK_TIME_MINUTES} minutos debido a demasiados intentos fallidos.` });
+                    }
+                    return res.status(401).json({ error: 'Contraseña incorrecta' });
+                });
+            } else {
+                // Restablecer los intentos fallidos y el bloqueo si la autenticación es exitosa
+                const resetAttemptsQuery = 'UPDATE usuarios SET login_attempts = 0, lock_until = NULL WHERE correo = ?';
+                connection.query(resetAttemptsQuery, [email], (err) => {
+                    if (err) {
+                        console.error('Error al restablecer intentos de login:', err);
+                        return res.status(500).json({ error: 'Error al procesar el inicio de sesión' });
+                    }
+
+                    console.log('Autenticación exitosa');
+                    res.json({
+                        user: usuario.correo,  // Envía el correo del usuario autenticado
+                        tipo: usuario.tipo,     // Envía el tipo de usuario
+                    });
+                });
+            }
         });
     });
 });

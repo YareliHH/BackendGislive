@@ -1,6 +1,19 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../Config/db'); // Conexión a la base de datos desde db.js
+const nodemailer = require('nodemailer');
+
+const MAX_ATTEMPTS = 5; // Número máximo de intentos fallidos
+const LOCK_TIME_MINUTES = 20; // Tiempo de bloqueo en minutos
+
+// Configuración de nodemailer
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: 'yarelihh2023@gmail.com',
+        pass: 'fgpn vbfd cord nxvu',
+    },
+});
 
 // Endpoint para verificar si el correo existe
 router.post('/verificar-correo', (req, res) => {
@@ -49,5 +62,70 @@ router.post('/registro', (req, res) => {
         res.status(201).json({ message: 'Usuario registrado exitosamente' });
     });
 });
+router.post('/send-verification-email', (req, res) => { 
+    const { email } = req.body;
+
+    const checkUserSql = 'SELECT * FROM usuarios WHERE email = ?';
+    db.query(checkUserSql, [email], (err, result) => {
+        if (err) {
+            return res.status(500).json({ message: 'Error al verificar el correo electrónico.' });
+        }
+
+        if (result.length > 0 && result[0].verificado === 1) {
+            return res.status(400).json({ message: 'El correo electrónico ya está registrado.' });
+        }
+
+        if (result.length > 0) {
+            return res.status(400).json({ message: 'El correo electrónico ya está registrado.' });
+        }
+        // Generar token
+        const verificationToken = generateToken();
+
+        const tokenExpiration = new Date(Date.now() + 900000); // Expira en 15 minutos
+
+        const sql = `
+            INSERT INTO usuarios (email, token_verificacion, token_expiracion, verificado)
+            VALUES (?, ?, ?, 0)
+        `;
+        db.query(sql, [email, verificationToken, tokenExpiration], async (err, result) => {
+            if (err) {
+                return res.status(500).json({ message: 'Error al generar el token de verificación.' });
+            }
+
+             // Generar el enlace de verificación correctamente
+             const verificationLink = `https://backendgislive.onrender.com/api/verify-email?token=${verificationToken}&email=${encodeURIComponent(email)}`;
+
+             const mailOptions = {
+                from: 'Jehiely_24@hotmail.com',
+                to: email,
+                subject: 'Verificación de Correo - Gislive Boutique',
+                html: `
+                    <div style="font-family: Arial, sans-serif; color: #333;">
+                        <div style="text-align: center; padding: 20px;">
+                            <h1 style="color: #1976d2;">Gislive Boutique</h1>
+                            <p>Bienvenido</p>
+                            <p>Gracias por registrarte en <b>Gislive Boutique</b>. Para completar tu registro, por favor verifica tu correo electrónico utilizando el siguiente código:</p>
+                            <div style="padding: 10px; background-color: #f0f0f0; border-radius: 5px; display: inline-block; margin: 20px 0;">
+                                <span style="font-size: 24px; font-weight: bold; color: #1976d2;">${verificationToken}</span>
+                            </div>
+                            <p>Ingresa este código en la página de verificación de tu cuenta.</p>
+                            <p style="color: #d32f2f; font-weight: bold; font-size: 18px;">El token debe ser copiado tal y como está, respetando mayúsculas, minúsculas y guiones.</p>
+                            <p><b>Nota:</b> Este código caduca en 15 minutos.</p>
+                            <hr style="margin: 20px 0;">
+                        </div>
+                    </div>
+                `,
+            };
+
+            try {
+                await transporter.sendMail(mailOptions);
+                res.status(200).json({ message: 'Correo de verificación enviado.' });
+            } catch (mailError) {
+                return res.status(500).json({ message: 'Error al enviar el correo de verificación.' });
+            }
+        });
+    });
+});
 
 module.exports = router;
+
