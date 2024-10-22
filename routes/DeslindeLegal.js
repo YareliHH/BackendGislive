@@ -3,7 +3,6 @@ const router = express.Router();
 const connection = require('../Config/db');
 const bodyParser = require('body-parser');
 
-
 router.use(bodyParser.json());
 
 // Crear un nuevo registro de Deslinde Legal (Create)
@@ -44,7 +43,7 @@ router.get('/deslinde/:id', (req, res) => {
 });
 
 // Actualizar un registro de Deslinde Legal por ID (Update)
-app.put('/deslinde/:id', (req, res) => {
+router.put('/deslinde/:id', (req, res) => {
     const { id } = req.params;
     const { cliente_nombre, descripcion, fecha_deslinde, estatus } = req.body;
     const sql = `UPDATE Deslinde_Legal 
@@ -62,7 +61,7 @@ app.put('/deslinde/:id', (req, res) => {
 });
 
 // Eliminar un registro de Deslinde Legal por ID (Delete)
-app.delete('/deslinde/:id', (req, res) => {
+router.delete('/deslinde/:id', (req, res) => {
     const { id } = req.params;
     const sql = 'DELETE FROM Deslinde_Legal WHERE id = ?';
 
@@ -74,11 +73,6 @@ app.delete('/deslinde/:id', (req, res) => {
             res.status(404).send({ message: 'Deslinde Legal no encontrado' });
         }
     });
-});
-
-// Iniciar el servidor
-app.listen(port, () => {
-    console.log(`Servidor corriendo en http://localhost:${port}`);
 });
 
 module.exports = router;
