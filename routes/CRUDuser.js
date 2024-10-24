@@ -8,9 +8,9 @@ const MAX_ATTEMPTS = 5; // Número máximo de intentos fallidos
 const LOCK_TIME_MINUTES = 20; // Tiempo de bloqueo en minutos
 
 router.post('/login', async (req, res) => {
-    const { email, password, captchaValue } = req.body;
+    const { correo, password, captchaValue } = req.body;
 
-    console.log('Datos recibidos del frontend:', { email, password, captchaValue });
+    console.log('Datos recibidos del frontend:', { correo, password, captchaValue });
 
     // Validar el reCAPTCHA antes de proceder con el login
     try {
@@ -28,7 +28,7 @@ router.post('/login', async (req, res) => {
 
     // Consulta a la base de datos para encontrar al usuario por correo
     const query = 'SELECT * FROM usuarios WHERE correo = ?';
-    connection.query(query, [email], (err, results) => {
+    connection.query(query, [correo], (err, results) => {
         if (err) {
             console.error('Error en la base de datos:', err);
             return res.status(500).json({ error: 'Error en la base de datos' });
@@ -37,7 +37,7 @@ router.post('/login', async (req, res) => {
         console.log('Resultados de la consulta de usuario:', results);
 
         if (results.length === 0) {
-            console.log('Usuario no encontrado:', email);
+            console.log('Usuario no encontrado:', correo);
             return res.status(401).json({ error: 'Usuario no encontrado' });
         }
 
