@@ -10,6 +10,8 @@ const { getTerminos, createTerminos, updateTerminos, deleteTerminos } = require(
 
 
 const app = express();
+const router = express.Router(); // Asegúrate de definir el router
+
 
 app.use(cors());
 app.use(bodyParser.json());
