@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../Config/db'); // Conexión a la base de datos desde db.js
+const db = require('../Config/db'); // Conexión a la base de datos desde db.jsssss
 const nodemailer = require('nodemailer');
 
 // Configuración de nodemailer

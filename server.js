@@ -4,7 +4,7 @@ const cors = require('cors');
 const Registrer = require('./routes/CRUDregistre.js'); 
 const login = require('./routes/CRUDuser.js'); 
 
-const { getDeslindes, createDeslinde, updateDeslinde, deleteDeslinde } = require('./routes/CrudDeslinde'); // Corregido
+const { getDeslindes, createDeslinde, updateDeslinde, deleteDeslinde } = require('./routes/CrudDeslinde'); // Corregidooo
 const { getPoliticas, createPolitica, updatePolitica, deletePolitica } = require('./routes/CrudPoliticas'); // Corregido
 const { getTerminos, createTerminos, updateTerminos, deleteTerminos } = require('./routes/CrudTerminosYC'); // Corregido
 
