@@ -17,8 +17,6 @@ app.use(bodyParser.json());
 app.use('/api', Registrer); 
 app.use('/api', login); 
 
-router.post('/recuperar-password', recuperarPassword);
-router.post('/cambiar-password', cambiarPassword);
 
 //CRUD Deslinde
 router.get('/getDeslindes', getDeslindes);
