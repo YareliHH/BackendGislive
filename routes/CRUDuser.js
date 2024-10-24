@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const connection = require('../Config/db');
 const bcrypt = require('bcryptjs'); // Importar bcrypt para comparar contraseñas
-const axios = require('axios'); // Para hacer la solicitud a Google reCAPTCHA
+const axios = require('axios'); // Para hacer la solicitud a Google reCAPTCHAAA
 
 const MAX_ATTEMPTS = 5; // Número máximo de intentos fallidos
 const LOCK_TIME_MINUTES = 20; // Tiempo de bloqueo en minutos
