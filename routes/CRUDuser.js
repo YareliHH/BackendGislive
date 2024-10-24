@@ -15,6 +15,7 @@ router.post('/login', async (req, res) => {
     // Validar el reCAPTCHA antes de proceder con el login
     try {
         const recaptchaResponse = await axios.post(`https://www.google.com/recaptcha/api/siteverify?secret=6LcKwWEqAAAAAN5jWmdv3NLpvl6wSeIRRnm9Omjq&response=${captchaValue}`);
+        console.log('Respuesta de reCAPTCHA:', recaptchaResponse.data);
 
         if (!recaptchaResponse.data.success) {
             console.log('Fallo en la verificación de reCAPTCHA');
@@ -33,6 +34,8 @@ router.post('/login', async (req, res) => {
             return res.status(500).json({ error: 'Error en la base de datos' });
         }
 
+        console.log('Resultados de la consulta de usuario:', results);
+
         if (results.length === 0) {
             console.log('Usuario no encontrado:', email);
             return res.status(401).json({ error: 'Usuario no encontrado' });
@@ -48,6 +51,8 @@ router.post('/login', async (req, res) => {
                 console.error('Error al consultar los intentos de login:', err);
                 return res.status(500).json({ error: 'Error en la base de datos' });
             }
+
+            console.log('Resultados de intentos de login:', attemptsResult);
 
             let loginAttempts = 0;
             let lockUntil = null;
@@ -124,3 +129,4 @@ router.post('/login', async (req, res) => {
 });
 
 module.exports = router;
+
