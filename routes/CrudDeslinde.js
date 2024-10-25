@@ -3,67 +3,63 @@ const router = express.Router();
 const connection = require('../Config/db');
 
 
-// Obtener todos los registros de Deslinde Legal (Read)
-const getDeslindes = (req, res) => {
-    const sql = 'SELECT * FROM Deslinde_Legal';
-    db.query(sql, (err, results) => {
+// Ruta para insertar un nuevo deslinde legal
+router.post('/insert', (req, res) => {
+    const { numero_deslinde, titulo, contenido } = req.body;
+
+    const query = `INSERT INTO tbldeslinde_legal (numero_deslinde, titulo, contenido) VALUES (?, ?, ?)`;
+
+    db.query(query, [numero_deslinde, titulo, contenido], (err, result) => {
         if (err) {
-            console.error('Error al obtener los registros de Deslinde Legal:', err);
-            return res.status(500).json({ message: "Error al obtener los registros" });
+            console.log(err);
+            return res.status(500).send('Error en el servidor');
+        }
+        res.status(200).send('Deslinde legal insertado con éxito');
+    });
+});
+
+// Ruta para actualizar un deslinde legal
+router.put('/update/:id', (req, res) => {
+    const { id } = req.params;
+    const { numero_deslinde, titulo, contenido } = req.body;
+
+    const query = `UPDATE tbldeslinde_legal SET numero_deslinde = ?, titulo = ?, contenido = ? WHERE id = ?`;
+
+    db.query(query, [numero_deslinde, titulo, contenido, id], (err, result) => {
+        if (err) {
+            console.log(err);
+            return res.status(500).send('Error en el servidor');
+        }
+        res.status(200).send('Deslinde legal actualizado con éxito');
+    });
+});
+
+// Ruta para eliminar un deslinde legal
+router.delete('/delete/:id', (req, res) => {
+    const { id } = req.params;
+
+    const query = `DELETE FROM tbldeslinde_legal WHERE id = ?`;
+
+    db.query(query, [id], (err, result) => {
+        if (err) {
+            console.log(err);
+            return res.status(500).send('Error en el servidor');
+        }
+        res.status(200).send('Deslinde legal eliminado con éxito');
+    });
+});
+
+// Ruta para obtener todos los deslindes legales
+router.get('/getdeslinde', (req, res) => {
+    const query = `SELECT * FROM tbldeslinde_legal ORDER BY numero_deslinde`;
+
+    db.query(query, (err, results) => {
+        if (err) {
+            console.log(err);
+            return res.status(500).send('Error en el servidor');
         }
         res.status(200).json(results);
     });
-};
+});
 
-// Crear un nuevo registro de Deslinde Legal (Create)
-const createDeslinde = (req, res) => {
-    const { cliente_nombre, descripcion, fecha_deslinde, estatus } = req.body;
-    const sql = `INSERT INTO Deslinde_Legal (cliente_nombre, descripcion, fecha_deslinde, estatus) 
-                 VALUES (?, ?, ?, ?)`;
-    db.query(sql, [cliente_nombre, descripcion, fecha_deslinde, estatus], (err, result) => {
-        if (err) {
-            console.error('Error al crear Deslinde Legal:', err);
-            return res.status(500).json({ message: "Error al crear el Deslinde Legal" });
-        }
-        res.status(201).json({ message: 'Deslinde Legal creado exitosamente', id: result.insertId });
-    });
-};
-
-// Actualizar un registro de Deslinde Legal por ID (Update)
-const updateDeslinde = (req, res) => {
-    const { id } = req.params;
-    const { cliente_nombre, descripcion, fecha_deslinde, estatus } = req.body;
-    const sql = `UPDATE Deslinde_Legal 
-                 SET cliente_nombre = ?, descripcion = ?, fecha_deslinde = ?, estatus = ? 
-                 WHERE id = ?`;
-    db.query(sql, [cliente_nombre, descripcion, fecha_deslinde, estatus, id], (err, result) => {
-        if (err) {
-            console.error('Error al actualizar Deslinde Legal:', err);
-            return res.status(500).json({ message: "Error al actualizar el Deslinde Legal" });
-        }
-        if (result.affectedRows > 0) {
-            res.status(200).json({ message: 'Deslinde Legal actualizado exitosamente' });
-        } else {
-            res.status(404).json({ message: 'Deslinde Legal no encontrado' });
-        }
-    });
-};
-
-// Eliminar un registro de Deslinde Legal por ID (Delete)
-const deleteDeslinde = (req, res) => {
-    const { id } = req.params;
-    const sql = 'DELETE FROM Deslinde_Legal WHERE id = ?';
-    db.query(sql, [id], (err, result) => {
-        if (err) {
-            console.error('Error al eliminar Deslinde Legal:', err);
-            return res.status(500).json({ message: "Error al eliminar el Deslinde Legal" });
-        }
-        if (result.affectedRows > 0) {
-            res.status(200).json({ message: 'Deslinde Legal eliminado exitosamente' });
-        } else {
-            res.status(404).json({ message: 'Deslinde Legal no encontrado' });
-        }
-    });
-};
-
-module.exports = { getDeslindes, createDeslinde, updateDeslinde, deleteDeslinde };
+module.exports = router

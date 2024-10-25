@@ -1,60 +1,130 @@
 const express = require('express');
+const db = require('../db'); // Asegúrate de que la ruta a tu conexión de base de datos sea correcta
 const router = express.Router();
-const connection = require('../Config/db');
 
-const getPoliticas = async (req, res) => {
-    const sql = "SELECT * FROM politicas"; 
-    db.query(sql, (err, result) => {
+// Ruta para insertar una nueva política de privacidad
+router.post('/insert', (req, res) => {
+    const { numero_politica, titulo, contenido } = req.body;
+
+    // Verificar la versión más alta actual para asignar una nueva versión
+    const selectQuery = 'SELECT MAX(CAST(version AS DECIMAL(5,2))) AS maxVersion FROM politicas_privacidad';
+
+    db.query(selectQuery, (err, result) => {
         if (err) {
-            console.error('Error en la consulta:', err);
-            return res.status(500).json({ message: "Error en el servidor" });
+            console.log(err);
+            return res.status(500).send('Error en el servidor al obtener la versión actual');
         }
-        return res.json(result);
-    });
-};
 
-const createPolitica = async (req, res) => {
-    const { politica } = req.body; 
-    const sql = "INSERT INTO politicas (politica) VALUES (?)"; 
-    db.query(sql, [politica], (err, result) => {
+        // Si no hay versiones, comenzamos con la versión 1.0
+        const maxVersion = result[0].maxVersion ? Math.floor(parseFloat(result[0].maxVersion)) + 1 : 1;
+
+        // Insertar la nueva política con la versión calculada (entera)
+        const insertQuery = 'INSERT INTO politicas_privacidad (numero_politica, titulo, contenido, estado, version) VALUES (?, ?, ?, ?, ?)';
+        db.query(insertQuery, [numero_politica, titulo, contenido, 'activo', maxVersion.toFixed(2)], (err, result) => {
+            if (err) {
+                console.log(err);
+                return res.status(500).send('Error en el servidor al insertar nueva política');
+            }
+            res.status(200).send(`Política de privacidad insertada con éxito, versión ${maxVersion.toFixed(2)}`);
+        });
+    });
+});
+
+// Ruta para actualizar una política de privacidad
+router.put('/update/:id', (req, res) => {
+    const { numero_politica, titulo, contenido } = req.body;
+
+    // Primero obtenemos la última versión de esta política para calcular la nueva versión
+    const selectQuery = 'SELECT MAX(CAST(version AS DECIMAL(5,2))) AS maxVersion FROM politicas_privacidad WHERE numero_politica = ?';
+
+    db.query(selectQuery, [numero_politica], (err, result) => {
         if (err) {
-            console.error('Error al crear politicas:', err);
-            return res.status(500).json({ message: "Ocurrió un error inesperado" + err });
+            console.log(err);
+            return res.status(500).send('Error al obtener la versión actual');
         }
-        return res.json({ success: "politicas agregado correctamente", id: result.insertId });
+
+        // Obtener la versión más alta de la política y calcular la siguiente versión (decimal)
+        const currentVersion = result[0].maxVersion;
+        let newVersion;
+
+        if (currentVersion) {
+            // Si la versión ya tiene un decimal, simplemente incrementamos la parte decimal
+            const versionParts = currentVersion.toString().split('.');
+            if (versionParts.length === 1 || versionParts[1] === '00') {
+                // Si es una versión entera (por ejemplo, 1), la siguiente será 1.1
+                newVersion = `${versionParts[0]}.1`;
+            } else {
+                // Si ya es decimal (por ejemplo, 1.1), incrementamos la parte decimal
+                const majorVersion = versionParts[0]; // Parte entera
+                const minorVersion = parseInt(versionParts[1], 10) + 1; // Incrementamos la parte decimal
+                newVersion = `${majorVersion}.${minorVersion}`;
+            }
+        } else {
+            // Si no hay versiones anteriores, comenzamos con la versión 1.0
+            newVersion = '1.1';
+        }
+
+        // Desactivar la versión anterior de la política
+        const deactivateQuery = 'UPDATE politicas_privacidad SET estado = "inactivo" WHERE numero_politica = ?';
+        db.query(deactivateQuery, [numero_politica], (err, result) => {
+            if (err) {
+                console.log(err);
+                return res.status(500).send('Error al desactivar la versión anterior');
+            }
+
+            // Insertar la nueva política con la versión incrementada (decimal)
+            const insertQuery = 'INSERT INTO politicas_privacidad (numero_politica, titulo, contenido, estado, version) VALUES (?, ?, ?, ?, ?)';
+            db.query(insertQuery, [numero_politica, titulo, contenido, 'activo', newVersion], (err, result) => {
+                if (err) {
+                    console.log(err);
+                    return res.status(500).send('Error al insertar la nueva versión de la política');
+                }
+                res.status(200).send(`Política actualizada a la versión ${newVersion}`);
+            });
+        });
     });
-};
+});
 
-const updatePolitica = async (req, res) => {
-    const { id } = req.params; 
-    const { politica } = req.body; 
 
-    const sql = "UPDATE politicas SET politica = ? WHERE id = ?";
-    db.query(sql, [politica, id], (err, result) => {
+// Ruta para eliminar (lógicamente) una política de privacidad
+router.put('/deactivate/:id', (req, res) => {
+    const { id } = req.params;
+
+    const query = 'UPDATE politicas_privacidad SET estado = ? WHERE id = ?';
+
+    db.query(query, ['inactivo', id], (err, result) => {
         if (err) {
-            console.error('Error al actualizar politicas:', err);
-            return res.status(500).json({ message: "Error al actualizar politicas" });
+            console.log(err);
+            return res.status(500).send('Error en el servidor');
         }
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ message: "politica no encontrado" });
-        }
-        return res.json({ id, politica });
+        res.status(200).send('Política de privacidad eliminada (lógicamente) con éxito');
     });
-};
+});
 
-const deletePolitica = async (req, res) => {
-    const id = req.params.id;
-    const sql = "DELETE FROM politicas WHERE id = ?";
-    db.query(sql, [id], (err, result) => {
+// Ruta para obtener todas las políticas de privacidad activas
+router.get('/getpolitica', (req, res) => {
+    const query = 'SELECT * FROM politicas_privacidad WHERE estado = "activo" ORDER BY numero_politica';
+
+    db.query(query, (err, results) => {
         if (err) {
-            console.error('Error al eliminar politicas:', err);
-            return res.status(500).json({ message: "Ocurrió un error inesperado" + err });
+            console.log(err);
+            return res.status(500).send('Error en el servidor');
         }
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ message: "politicas no encontrado" });
-        }
-        return res.json({ success: "politicas eliminado correctamente" });
+        res.status(200).json(results);
     });
-};
+});
 
-module.exports = { updatePolitica, deletePolitica, createPolitica, getPoliticas };
+// Ruta para obtener todas las políticas (activas e inactivas)
+router.get('/getAllPoliticas', (req, res) => {
+    const query = 'SELECT * FROM politicas_privacidad ORDER BY numero_politica, CAST(version AS DECIMAL(5,2)) ASC';
+
+    db.query(query, (err, results) => {
+        if (err) {
+            console.log(err);
+            return res.status(500).send('Error en el servidor');
+        }
+        res.status(200).json(results);
+    });
+});
+
+module.exports = router;

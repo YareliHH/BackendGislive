@@ -2,11 +2,13 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors'); 
 const Registrer = require('./routes/CRUDregistre.js'); 
-const login = require('./routes/CRUDuser.js'); 
+const login = require('./routes/CRUDuser.js');  
+const TerminosYC = require('./routes/CrudTerminosYC.js'); 
+const politicas = require('./routes/CrudPoliticas.js');
+const deslinde = require('./routes/CrudDeslinde.js');
+const perfil_empresa=require('./routes/PerfiEmpresa.js');
+const redesSociales =require('./routes/RedesSociales.js');
 
-const { getDeslindes, createDeslinde, updateDeslinde, deleteDeslinde } = require('./routes/CrudDeslinde'); // Corregidooo
-const { getPoliticas, createPolitica, updatePolitica, deletePolitica } = require('./routes/CrudPoliticas'); // Corregido
-const { getTerminos, createTerminos, updateTerminos, deleteTerminos } = require('./routes/CrudTerminosYC'); // Corregido
 
 
 const app = express();
@@ -17,26 +19,14 @@ app.use(cors());
 app.use(bodyParser.json());
 
 app.use('/api', Registrer); 
-app.use('/api', login); 
+app.use('/api', login);
+app.use('/api', TerminosYC);
+app.use('/api', TerminosYC);
+app.use('/api', politicas);
+app.use('/api', deslinde); 
+app.use('/api/',perfil_empresa);
+app.use('/api/',redesSociales);
 
-
-//CRUD Deslinde
-router.get('/getDeslindes', getDeslindes);
-router.post('/add_deslinde', createDeslinde);
-router.put('/edit_deslinde/:id', updateDeslinde);
-router.delete('/delete_deslinde/:id', deleteDeslinde);
-
-//CRUD Politicas
-router.get('/getPoliticas', getPoliticas);
-router.post('/add_politica', createPolitica);
-router.put('/edit_politica/:id', updatePolitica);
-router.delete('/delete_politica/:id', deletePolitica);
-
-//CRUD Terminos
-router.get('/getTerminos', getTerminos);
-router.post('/add_termino', createTerminos);
-router.put('/edit_termino/:id', updateTerminos);
-router.delete('/delete_termino/:id', deleteTerminos);
 
 
 
@@ -48,3 +38,5 @@ app.listen(PORT, () => {
 
 
 module.exports = router;
+
+
