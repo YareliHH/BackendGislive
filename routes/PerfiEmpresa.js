@@ -32,13 +32,16 @@ router.post('/perfil', upload.single('logo'), async (req, res) => {
     let logoUrl = null;
     if (req.file) {
         try {
-            const uploadResult = await cloudinary.uploader.upload_stream(
-                { resource_type: 'image', folder: 'logos_empresas' },
-                (error, result) => {
-                    if (error) throw error;
-                    return result;
-                }
-            );
+            const uploadResult = await new Promise((resolve, reject) => {
+                const stream = cloudinary.uploader.upload_stream(
+                    { resource_type: 'image', folder: 'logos_empresas' },
+                    (error, result) => {
+                        if (error) reject(error);
+                        resolve(result);
+                    }
+                );
+                stream.end(req.file.buffer);
+            });
             logoUrl = uploadResult.secure_url;
         } catch (uploadError) {
             console.error(uploadError);
@@ -46,7 +49,7 @@ router.post('/perfil', upload.single('logo'), async (req, res) => {
         }
     }
 
-    const query = `INSERT INTO perfil_empresa (nombre_empresa, direccion, telefono, correo_electronico, descripcion, logo_url, slogan, titulo_pagina) 
+    const query = `INSERT INTO perfil_empresa (nombre_empresa, direccion, telefono, correo_electronico, descripcion, logo, slogan, titulo_pagina) 
                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
 
     connection.query(query, [nombre_empresa, direccion, telefono, correo_electronico, descripcion, logoUrl, slogan, titulo_pagina], (err) => {
@@ -64,13 +67,16 @@ router.put('/updateDatos', upload.single('logo'), async (req, res) => {
     let logoUrl = null;
     if (req.file) {
         try {
-            const uploadResult = await cloudinary.uploader.upload_stream(
-                { resource_type: 'image', folder: 'logos_empresas' },
-                (error, result) => {
-                    if (error) throw error;
-                    return result;
-                }
-            );
+            const uploadResult = await new Promise((resolve, reject) => {
+                const stream = cloudinary.uploader.upload_stream(
+                    { resource_type: 'image', folder: 'logos_empresas' },
+                    (error, result) => {
+                        if (error) reject(error);
+                        resolve(result);
+                    }
+                );
+                stream.end(req.file.buffer);
+            });
             logoUrl = uploadResult.secure_url;
         } catch (uploadError) {
             console.error(uploadError);
@@ -79,7 +85,7 @@ router.put('/updateDatos', upload.single('logo'), async (req, res) => {
     }
 
     const query = `UPDATE perfil_empresa SET nombre_empresa = ?, direccion = ?, telefono = ?, correo_electronico = ?, descripcion = ?, 
-                   slogan = ?, titulo_pagina = ?, logo_url = ? WHERE id_empresa = ?`;
+                   slogan = ?, titulo_pagina = ?, logo = ? WHERE id_empresa = ?`;
     const values = [nombre_empresa, direccion, telefono, correo_electronico, descripcion, slogan, titulo_pagina, logoUrl, id_empresa];
 
     connection.query(query, values, (err) => {
@@ -91,7 +97,7 @@ router.put('/updateDatos', upload.single('logo'), async (req, res) => {
     });
 });
 
-module.exports = router;
+
 
 
 // Endpoint para actualizar el logo de la empresa
