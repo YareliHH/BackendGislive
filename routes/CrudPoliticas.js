@@ -32,12 +32,13 @@ router.post('/insert', (req, res) => {
 
 // Ruta para actualizar una política de privacidad
 router.put('/update/:id', (req, res) => {
-    const { numero_politica, titulo, contenido } = req.body;
+    const { titulo, contenido } = req.body;
+    const { id } = req.params;
 
     // Primero obtenemos la última versión de esta política para calcular la nueva versión
-    const selectQuery = 'SELECT MAX(CAST(version AS DECIMAL(5,2))) AS maxVersion FROM politicas_privacidad WHERE numero_politica = ?';
+    const selectQuery = 'SELECT MAX(CAST(version AS DECIMAL(5,2))) AS maxVersion FROM politicas_privacidad WHERE id = ?';
 
-    connection.query(selectQuery, [numero_politica], (err, result) => {
+    connection.query(selectQuery, [id], (err, result) => {
         if (err) {
             console.log(err);
             return res.status(500).send('Error al obtener la versión actual');
@@ -51,12 +52,10 @@ router.put('/update/:id', (req, res) => {
             // Si la versión ya tiene un decimal, simplemente incrementamos la parte decimal
             const versionParts = currentVersion.toString().split('.');
             if (versionParts.length === 1 || versionParts[1] === '00') {
-                // Si es una versión entera (por ejemplo, 1), la siguiente será 1.1
                 newVersion = `${versionParts[0]}.1`;
             } else {
-                // Si ya es decimal (por ejemplo, 1.1), incrementamos la parte decimal
-                const majorVersion = versionParts[0]; // Parte entera
-                const minorVersion = parseInt(versionParts[1], 10) + 1; // Incrementamos la parte decimal
+                const majorVersion = versionParts[0];
+                const minorVersion = parseInt(versionParts[1], 10) + 1;
                 newVersion = `${majorVersion}.${minorVersion}`;
             }
         } else {
@@ -65,16 +64,16 @@ router.put('/update/:id', (req, res) => {
         }
 
         // Desactivar la versión anterior de la política
-        const deactivateQuery = 'UPDATE politicas_privacidad SET estado = "inactivo" WHERE numero_politica = ?';
-        connection.query(deactivateQuery, [numero_politica], (err, result) => {
+        const deactivateQuery = 'UPDATE politicas_privacidad SET estado = "inactivo" WHERE id = ?';
+        connection.query(deactivateQuery, [id], (err, result) => {
             if (err) {
                 console.log(err);
                 return res.status(500).send('Error al desactivar la versión anterior');
             }
 
             // Insertar la nueva política con la versión incrementada (decimal)
-            const insertQuery = 'INSERT INTO politicas_privacidad (numero_politica, titulo, contenido, estado, version) VALUES (?, ?, ?, ?, ?)';
-            connection.query(insertQuery, [numero_politica, titulo, contenido, 'activo', newVersion], (err, result) => {
+            const insertQuery = 'INSERT INTO politicas_privacidad (titulo, contenido, estado, version) VALUES (?, ?, ?, ?)';
+            connection.query(insertQuery, [titulo, contenido, 'activo', newVersion], (err, result) => {
                 if (err) {
                     console.log(err);
                     return res.status(500).send('Error al insertar la nueva versión de la política');
@@ -84,6 +83,7 @@ router.put('/update/:id', (req, res) => {
         });
     });
 });
+
 
 // Ruta para eliminar (lógicamente) una política de privacidad
 router.put('/deactivate/:id', (req, res) => {
