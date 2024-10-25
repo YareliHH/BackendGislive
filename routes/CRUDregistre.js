@@ -36,7 +36,7 @@ router.post('/verificar-correo', (req, res) => {
 });
 
 // Endpoint para registrar un usuario
-router.post('/registro', (req, res) => {
+router.post('/registro', async (req, res) => {
     const { nombre, apellidoPaterno, apellidoMaterno, correo, telefono, password } = req.body;
 
     // Verificar que los campos requeridos están presentes
@@ -44,12 +44,9 @@ router.post('/registro', (req, res) => {
         return res.status(400).json({ message: 'Todos los campos son obligatorios excepto el teléfono' });
     }
 
-    // Hashear la contraseña usando bcrypt
-    bcrypt.hash(password, 10, (err, hashedPassword) => {
-        if (err) {
-            console.error('Error al hashear la contraseña:', err);
-            return res.status(500).json({ message: 'Error al registrar el usuario' });
-        }
+    try {
+        // Hashear la contraseña antes de almacenarla
+        const hashedPassword = await bcrypt.hash(password, 10);
 
         // Generar el código de verificación
         const verificationCode = crypto.randomInt(100000, 999999).toString();
@@ -57,7 +54,7 @@ router.post('/registro', (req, res) => {
         // Consulta SQL para insertar los datos en la tabla 'usuarios'
         const query = `
             INSERT INTO usuarios (nombre, apellido_paterno, apellido_materno, correo, telefono, password, tipo, estado, verification_code)
-            VALUES (?, ?, ?, ?, ?, ?, 'usuario', 'pendiente', ?)`;
+            VALUES (?, ?, ?, ?, ?, ?, 'usuario', 'pendiente', ?)`; // Estado pendiente hasta que verifique
 
         // Ejecución de la consulta con la contraseña hasheada y el código de verificación
         db.query(query, [nombre, apellidoPaterno, apellidoMaterno, correo, telefono || null, hashedPassword, verificationCode], (err, result) => {
@@ -84,7 +81,10 @@ router.post('/registro', (req, res) => {
                 res.status(201).json({ message: "Usuario creado. Por favor verifica tu correo electrónico." });
             });
         });
-    });
+    } catch (error) {
+        console.error('Error en el proceso de registro:', error);
+        res.status(500).json({ message: 'Error al registrar el usuario' });
+    }
 });
 
 
