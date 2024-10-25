@@ -1,6 +1,8 @@
 const express = require('express');
-const connection = require('../Config/db');// Ruta correcta a tu archivo de configuración de base de datos
+const connection = require('../Config/db'); // Ruta correcta a tu archivo de configuración de base de datos
 const multer = require('multer');
+const cloudinary = require('cloudinary').v2;
+
 const router = express.Router();
 
 const storage = multer.memoryStorage();
@@ -8,7 +10,6 @@ const upload = multer({
     storage: storage,
     limits: { fileSize: 1024 * 1024 * 10 }, // Límite de 10MB para archivos
     fileFilter: (req, file, cb) => {
-        // Permitir archivos JPEG, JPG y PNG
         if (file.mimetype === 'image/jpeg' || file.mimetype === 'image/jpg' || file.mimetype === 'image/png') {
             cb(null, true);
         } else {
@@ -17,9 +18,16 @@ const upload = multer({
     },
 });
 
+// Configuración directa de Cloudinary
+cloudinary.config({
+    cloud_name: 'dytchcrpf',
+    api_key: '997224391525815',
+    api_secret: '76Ptk4NzielvGw2oP_T6IiYUBM0',
+});
+
 // Endpoint para insertar el perfil de empresa
 router.post('/insert', (req, res, next) => {
-    upload.single('logo')(req, res, (err) => {
+    upload.single('logo')(req, res, async (err) => {
         if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
             return res.status(400).send('El archivo es demasiado grande. El tamaño máximo permitido es de 10MB.');
         } else if (err) {
@@ -27,18 +35,36 @@ router.post('/insert', (req, res, next) => {
         }
         next();
     });
-}, (req, res) => {
+}, async (req, res) => {
     const { nombre_empresa, direccion, telefono, correo_electronico, descripcion, slogan, titulo_pagina } = req.body;
-    const logo = req.file ? req.file.buffer : null;
 
     if (!nombre_empresa || !correo_electronico) {
         return res.status(400).send('Nombre de empresa y correo electrónico son obligatorios');
     }
 
-    const query = `INSERT INTO perfil_empresa (nombre_empresa, direccion, telefono, correo_electronico, descripcion, logo, slogan, titulo_pagina) 
+    let logoUrl = null;
+    if (req.file) {
+        try {
+            const uploadResult = await cloudinary.uploader.upload_stream({
+                resource_type: 'image',
+                folder: 'logos_empresas'  // Carpeta en Cloudinary
+            }, (error, result) => {
+                if (error) throw error;
+                return result;
+            });
+            logoUrl = uploadResult.secure_url;
+        } catch (uploadError) {
+            console.error(uploadError);
+            return res.status(500).send('Error al subir el logo a Cloudinary');
+        }
+    }
+
+    const query = `INSERT INTO perfil_empresa 
+                   (nombre_empresa, direccion, telefono, correo_electronico, descripcion, logo_url, slogan, titulo_pagina) 
                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
 
-    db.query(query, [nombre_empresa, direccion, telefono, correo_electronico, descripcion, logo, slogan, titulo_pagina], (err, result) => {
+    connection.query(query, [nombre_empresa, direccion, telefono, correo_electronico, descripcion, logoUrl, slogan, titulo_pagina], 
+    (err, result) => {
         if (err) {
             console.log(err);
             return res.status(500).send('Error en el servidor');
