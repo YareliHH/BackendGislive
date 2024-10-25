@@ -102,7 +102,7 @@ router.put('/deactivate/:id', (req, res) => {
 
 // Ruta para obtener todas las políticas de privacidad activas
 router.get('/getpolitica', (req, res) => {
-    const query = 'SELECT * FROM politicas_privacidad WHERE estado = "activo" ORDER BY numero_politica';
+    const query = 'SELECT * FROM politicas_privacidad WHERE estado = "activo" ORDER BY id';
 
     connection.query(query, (err, results) => {
         if (err) {
@@ -112,6 +112,7 @@ router.get('/getpolitica', (req, res) => {
         res.status(200).json(results);
     });
 });
+
 
 // Ruta para obtener todas las políticas (activas e inactivas)
 router.get('/getAllPoliticas', (req, res) => {
