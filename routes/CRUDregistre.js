@@ -51,10 +51,11 @@ router.post('/registro', (req, res) => {
             return res.status(500).json({ message: 'Error al registrar el usuario' });
         }
 
-      // Consulta SQL para insertar los datos en la tabla 'usuarios'
-      const query = `
-      INSERT INTO usuarios (nombre, apellido_paterno, apellido_materno, correo, telefono, password, tipo, estado, verification_code)
-      VALUES (?, ?, ?, ?, ?, ?, 'usuario', 'pendiente', ?)`;
+        // Consulta SQL para insertar los datos en la tabla 'usuarios'
+        const query = `
+            INSERT INTO usuarios (nombre, apellido_paterno, apellido_materno, correo, telefono, password, tipo, estado)
+            VALUES (?, ?, ?, ?, ?, ?, 'usuario', 'activo')`;
+
         // Ejecución de la consulta con la contraseña hasheada
         db.query(query, [nombre, apellidoPaterno, apellidoMaterno, correo, telefono || null, hashedPassword], (err, result) => {
             if (err) {
