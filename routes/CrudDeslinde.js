@@ -5,55 +5,106 @@ const connection = require('../Config/db');
 
 // Ruta para insertar un nuevo deslinde legal
 router.post('/insert', (req, res) => {
-    const { numero_deslinde, titulo, contenido } = req.body;
+    const { titulo, contenido } = req.body;
 
-    const query = `INSERT INTO tbldeslinde_legal (numero_deslinde, titulo, contenido) VALUES (?, ?, ?)`;
+    const selectQuery = 'SELECT MAX(CAST(version AS DECIMAL(5,2))) AS maxVersion FROM tbldeslinde_legal ';
 
-    db.query(query, [numero_deslinde, titulo, contenido], (err, result) => {
+    connection.query(selectQuery, (err, result) => {
         if (err) {
             console.log(err);
-            return res.status(500).send('Error en el servidor');
+            return res.status(500).send('Error en el servidor al obtener la versión actual');
         }
-        res.status(200).send('Deslinde legal insertado con éxito');
-    });
+
+        // Si no hay versiones, comenzamos con la versión 1.0
+        const maxVersion = result[0].maxVersion ? Math.floor(parseFloat(result[0].maxVersion)) + 1 : 1;
+
+        // Insertar la nueva deslinde con la versión calculada
+        const insertQuery = 'INSERT INTO tbldeslinde_legal (titulo, contenido, estado, version) VALUES (?, ?, ?, ?)';
+        connection.query(insertQuery, [titulo, contenido, 'activo', maxVersion.toFixed(2)], (err, result) => {
+            if (err) {
+                console.log(err);
+                return res.status(500).send('Error en el servidor al insertar nueva política');
+            }
+            res.status(200).send(`deslinde legal insertada con éxito, versión ${maxVersion.toFixed(2)}`);
+        });
+    });  
 });
 
-// Ruta para actualizar un deslinde legal
+// Ruta para actualizar un deslinde
 router.put('/update/:id', (req, res) => {
+    const { titulo, contenido } = req.body;
     const { id } = req.params;
-    const { numero_deslinde, titulo, contenido } = req.body;
 
-    const query = `UPDATE tbldeslinde_legal SET numero_deslinde = ?, titulo = ?, contenido = ? WHERE id = ?`;
+    // Primero obtenemos la última versión de esta deslinde para calcular la nueva versión
+    const selectQuery = 'SELECT MAX(CAST(version AS DECIMAL(5,2))) AS maxVersion FROM tbldeslinde_legal WHERE id = ?';
 
-    db.query(query, [numero_deslinde, titulo, contenido, id], (err, result) => {
+    connection.query(selectQuery, [id], (err, result) => {
+        if (err) {
+            console.log(err);
+            return res.status(500).send('Error al obtener la versión actual');
+        }
+
+        // Obtener la versión más alta del deslinde y calcular la siguiente versión (decimal)
+        const currentVersion = result[0].maxVersion;
+        let newVersion;
+
+        if (currentVersion) {
+            // Si la versión ya tiene un decimal, simplemente incrementamos la parte decimal
+            const versionParts = currentVersion.toString().split('.');
+            if (versionParts.length === 1 || versionParts[1] === '00') {
+                newVersion = `${versionParts[0]}.1`;
+            } else {
+                const majorVersion = versionParts[0];
+                const minorVersion = parseInt(versionParts[1], 10) + 1;
+                newVersion = `${majorVersion}.${minorVersion}`;
+            }
+        } else {
+            // Si no hay versiones anteriores, comenzamos con la versión 1.1
+            newVersion = '1.1';
+        }
+
+        // Desactivar la versión anterior de la deslinde
+        const deactivateQuery = 'UPDATE  tbldeslinde_legal SET estado = "inactivo" WHERE id = ?';
+        connection.query(deactivateQuery, [id], (err, result) => {
+            if (err) {
+                console.log(err);
+                return res.status(500).send('Error al desactivar la versión anterior');
+            }
+
+            // Insertar la nueva política con la versión incrementada (decimal)
+            const insertQuery = 'INSERT INTO  tbldeslinde_legal (titulo, contenido, estado, version) VALUES (?, ?, ?, ?)';
+            connection.query(insertQuery, [titulo, contenido, 'activo', newVersion], (err, result) => {
+                if (err) {
+                    console.log(err);
+                    return res.status(500).send('Error al insertar la nueva versión de la deslinde');
+                }
+                res.status(200).send(`deslinde legal a la versión ${newVersion}`);
+            });
+        });
+    });
+});
+
+
+// Ruta para eliminar (lógicamente) una política de privacidad
+router.put('/deactivate/:id', (req, res) => {
+    const { id } = req.params;
+
+    const query = 'UPDATE  tbldeslinde_legal SET estado = ? WHERE id = ?';
+
+    connection.query(query, ['inactivo', id], (err, result) => {
         if (err) {
             console.log(err);
             return res.status(500).send('Error en el servidor');
         }
-        res.status(200).send('Deslinde legal actualizado con éxito');
+        res.status(200).send('deslinde legal  eliminada (lógicamente) con éxito');
     });
 });
 
-// Ruta para eliminar un deslinde legal
-router.delete('/delete/:id', (req, res) => {
-    const { id } = req.params;
-
-    const query = `DELETE FROM tbldeslinde_legal WHERE id = ?`;
-
-    db.query(query, [id], (err, result) => {
-        if (err) {
-            console.log(err);
-            return res.status(500).send('Error en el servidor');
-        }
-        res.status(200).send('Deslinde legal eliminado con éxito');
-    });
-});
-
-// Ruta para obtener todos los deslindes legales
+// Ruta para obtener todas las políticas de privacidad activas
 router.get('/getdeslinde', (req, res) => {
-    const query = `SELECT * FROM tbldeslinde_legal ORDER BY numero_deslinde`;
+    const query = 'SELECT * FROM  tbldeslinde_legal WHERE estado = "activo" ORDER BY id';
 
-    db.query(query, (err, results) => {
+    connection.query(query, (err, results) => {
         if (err) {
             console.log(err);
             return res.status(500).send('Error en el servidor');
@@ -62,4 +113,18 @@ router.get('/getdeslinde', (req, res) => {
     });
 });
 
-module.exports = router
+
+// Ruta para obtener todas las políticas (activas e inactivas)
+router.get('/getdeslinde', (req, res) => {
+    const query = 'SELECT * FROM  tbldeslinde_legal ORDER BY numero_politica, CAST(version AS DECIMAL(5,2)) ASC';
+
+    connection.query(query, (err, results) => {
+        if (err) {
+            console.log(err);
+            return res.status(500).send('Error en el servidor');
+        }
+        res.status(200).json(results);
+    });
+});
+
+module.exports = router;
