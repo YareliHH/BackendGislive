@@ -41,6 +41,8 @@ router.post('/login', async (req, res) => {
         }
 
         const usuario = results[0];
+        console.log('Usuario encontrado:', usuario);
+
         const currentTime = Date.now(); // Obtener la hora actual
 
         // Verificar si el usuario está bloqueado
@@ -63,10 +65,12 @@ router.post('/login', async (req, res) => {
             // Verificar si el usuario está bloqueado
             if (lockUntil && currentTime < lockUntil) {
                 const remainingTime = Math.round((lockUntil - currentTime) / 60000); // Convertir ms a minutos
+                console.log(`Cuenta bloqueada. Inténtalo de nuevo en ${remainingTime} minutos.`);
                 return res.status(403).json({ error: `Cuenta bloqueada. Inténtalo de nuevo en ${remainingTime} minutos.` });
             }
 
             // Si no está bloqueado, comparar la contraseña
+            console.log('Comparando contraseñas...');
             bcrypt.compare(password, usuario.password, (err, isMatch) => {
                 if (err) {
                     console.error('Error al comparar contraseñas:', err);
@@ -84,10 +88,13 @@ router.post('/login', async (req, res) => {
                         loginAttempts = attemptsResult[0].intentos_fallidos + 1;
                     }
 
+                    console.log(`Intentos fallidos: ${loginAttempts}`);
+
                     // Si los intentos fallidos alcanzan el máximo permitido, bloquear la cuenta
                     if (loginAttempts >= 5) {
                         newLockUntil = Date.now() + LOCK_TIME_MINUTES * 60 * 1000; // Bloqueo en milisegundos
                         loginAttempts = 0; // Reiniciar intentos después del bloqueo
+                        console.log(`Cuenta bloqueada por ${LOCK_TIME_MINUTES} minutos.`);
                     }
 
                     const updateAttemptsQuery = `
@@ -108,6 +115,8 @@ router.post('/login', async (req, res) => {
                         return res.status(401).json({ error: 'Contraseña incorrecta' });
                     });
                 } else {
+                    console.log('Contraseña correcta, restableciendo intentos fallidos.');
+
                     // Restablecer intentos fallidos si la autenticación es exitosa
                     const resetAttemptsQuery = 'DELETE FROM login_attempts WHERE usuarios_id = ?';
                     connection.query(resetAttemptsQuery, [usuario.id], (err) => {
