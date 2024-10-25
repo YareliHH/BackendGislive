@@ -9,7 +9,7 @@ router.post('/insert', (req, res) => {
     // Verificar la versión más alta actual para asignar una nueva versión
     const selectQuery = 'SELECT MAX(CAST(version AS DECIMAL(5,2))) AS maxVersion FROM politicas_privacidad';
 
-    db.query(selectQuery, (err, result) => {
+    connection.query(selectQuery, (err, result) => {
         if (err) {
             console.log(err);
             return res.status(500).send('Error en el servidor al obtener la versión actual');
@@ -20,7 +20,7 @@ router.post('/insert', (req, res) => {
 
         // Insertar la nueva política con la versión calculada (entera)
         const insertQuery = 'INSERT INTO politicas_privacidad (numero_politica, titulo, contenido, estado, version) VALUES (?, ?, ?, ?, ?)';
-        db.query(insertQuery, [numero_politica, titulo, contenido, 'activo', maxVersion.toFixed(2)], (err, result) => {
+        connection.query(insertQuery, [numero_politica, titulo, contenido, 'activo', maxVersion.toFixed(2)], (err, result) => {
             if (err) {
                 console.log(err);
                 return res.status(500).send('Error en el servidor al insertar nueva política');
@@ -37,7 +37,7 @@ router.put('/update/:id', (req, res) => {
     // Primero obtenemos la última versión de esta política para calcular la nueva versión
     const selectQuery = 'SELECT MAX(CAST(version AS DECIMAL(5,2))) AS maxVersion FROM politicas_privacidad WHERE numero_politica = ?';
 
-    db.query(selectQuery, [numero_politica], (err, result) => {
+    connection.query(selectQuery, [numero_politica], (err, result) => {
         if (err) {
             console.log(err);
             return res.status(500).send('Error al obtener la versión actual');
@@ -60,13 +60,13 @@ router.put('/update/:id', (req, res) => {
                 newVersion = `${majorVersion}.${minorVersion}`;
             }
         } else {
-            // Si no hay versiones anteriores, comenzamos con la versión 1.0
+            // Si no hay versiones anteriores, comenzamos con la versión 1.1
             newVersion = '1.1';
         }
 
         // Desactivar la versión anterior de la política
         const deactivateQuery = 'UPDATE politicas_privacidad SET estado = "inactivo" WHERE numero_politica = ?';
-        db.query(deactivateQuery, [numero_politica], (err, result) => {
+        connection.query(deactivateQuery, [numero_politica], (err, result) => {
             if (err) {
                 console.log(err);
                 return res.status(500).send('Error al desactivar la versión anterior');
@@ -74,7 +74,7 @@ router.put('/update/:id', (req, res) => {
 
             // Insertar la nueva política con la versión incrementada (decimal)
             const insertQuery = 'INSERT INTO politicas_privacidad (numero_politica, titulo, contenido, estado, version) VALUES (?, ?, ?, ?, ?)';
-            db.query(insertQuery, [numero_politica, titulo, contenido, 'activo', newVersion], (err, result) => {
+            connection.query(insertQuery, [numero_politica, titulo, contenido, 'activo', newVersion], (err, result) => {
                 if (err) {
                     console.log(err);
                     return res.status(500).send('Error al insertar la nueva versión de la política');
@@ -85,14 +85,13 @@ router.put('/update/:id', (req, res) => {
     });
 });
 
-
 // Ruta para eliminar (lógicamente) una política de privacidad
 router.put('/deactivate/:id', (req, res) => {
     const { id } = req.params;
 
     const query = 'UPDATE politicas_privacidad SET estado = ? WHERE id = ?';
 
-    db.query(query, ['inactivo', id], (err, result) => {
+    connection.query(query, ['inactivo', id], (err, result) => {
         if (err) {
             console.log(err);
             return res.status(500).send('Error en el servidor');
@@ -105,7 +104,7 @@ router.put('/deactivate/:id', (req, res) => {
 router.get('/getpolitica', (req, res) => {
     const query = 'SELECT * FROM politicas_privacidad WHERE estado = "activo" ORDER BY numero_politica';
 
-    db.query(query, (err, results) => {
+    connection.query(query, (err, results) => {
         if (err) {
             console.log(err);
             return res.status(500).send('Error en el servidor');
@@ -118,7 +117,7 @@ router.get('/getpolitica', (req, res) => {
 router.get('/getAllPoliticas', (req, res) => {
     const query = 'SELECT * FROM politicas_privacidad ORDER BY numero_politica, CAST(version AS DECIMAL(5,2)) ASC';
 
-    db.query(query, (err, results) => {
+    connection.query(query, (err, results) => {
         if (err) {
             console.log(err);
             return res.status(500).send('Error en el servidor');
