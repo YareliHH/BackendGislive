@@ -3,7 +3,7 @@ const router = express.Router();
 const connection = require('../Config/db');
 
 
-router.post('/insert', (req, res) => {
+router.post('/terminos', (req, res) => {
     const { titulo, contenido } = req.body;
 
     const selectQuery = 'SELECT MAX(CAST(version AS DECIMAL(5,2))) AS maxVersion FROM terminos_condiciones';
