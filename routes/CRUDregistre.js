@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const bcrypt = require('bcryptjs'); // Importar bcrypt para hashear contraseñas
 const db = require('../Config/db'); // Conexión a la base de datos desde db.jsssss
 const nodemailer = require('nodemailer');
 
@@ -43,22 +44,32 @@ router.post('/registro', (req, res) => {
         return res.status(400).json({ message: 'Todos los campos son obligatorios excepto el teléfono' });
     }
 
-    // Consulta SQL para insertar los datos en la tabla 'usuarios'
-    const query = `
-        INSERT INTO usuarios (nombre, apellido_paterno, apellido_materno, correo, telefono, password, tipo, estado)
-        VALUES (?, ?, ?, ?, ?, ?, 'usuario', 'activo')`;
-
-    // Ejecución de la consulta
-    db.query(query, [nombre, apellidoPaterno, apellidoMaterno, correo, telefono || null, password], (err, result) => {
+    // Hashear la contraseña usando bcrypt
+    bcrypt.hash(password, 10, (err, hashedPassword) => {
         if (err) {
-            console.error('Error al insertar usuario en la base de datos:', err);
+            console.error('Error al hashear la contraseña:', err);
             return res.status(500).json({ message: 'Error al registrar el usuario' });
         }
 
-        // Respuesta exitosa si se insertaron los datos
-        res.status(201).json({ message: 'Usuario registrado exitosamente' });
+        // Consulta SQL para insertar los datos en la tabla 'usuarios'
+        const query = `
+            INSERT INTO usuarios (nombre, apellido_paterno, apellido_materno, correo, telefono, password, tipo, estado)
+            VALUES (?, ?, ?, ?, ?, ?, 'usuario', 'activo')`;
+
+        // Ejecución de la consulta con la contraseña hasheada
+        db.query(query, [nombre, apellidoPaterno, apellidoMaterno, correo, telefono || null, hashedPassword], (err, result) => {
+            if (err) {
+                console.error('Error al insertar usuario en la base de datos:', err);
+                return res.status(500).json({ message: 'Error al registrar el usuario' });
+            }
+
+            // Respuesta exitosa si se insertaron los datos
+            res.status(201).json({ message: 'Usuario registrado exitosamente' });
+        });
     });
 });
+
+
 router.post('/send-verification-email', (req, res) => { 
     const { email } = req.body;
 
