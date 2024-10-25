@@ -10,7 +10,7 @@ const transporter = nodemailer.createTransport({
     auth: {
         user: 'yarelihh2023@gmail.com',
         pass: 'fgpn vbfd cord nxvu',
-    },
+    },
 });
 
 // Endpoint para verificar si el correo existe
@@ -51,23 +51,42 @@ router.post('/registro', (req, res) => {
             return res.status(500).json({ message: 'Error al registrar el usuario' });
         }
 
+        // Generar el código de verificación
+        const verificationCode = crypto.randomInt(100000, 999999).toString();
+
         // Consulta SQL para insertar los datos en la tabla 'usuarios'
         const query = `
-            INSERT INTO usuarios (nombre, apellido_paterno, apellido_materno, correo, telefono, password, tipo, estado)
-            VALUES (?, ?, ?, ?, ?, ?, 'usuario', 'activo')`;
+            INSERT INTO usuarios (nombre, apellido_paterno, apellido_materno, correo, telefono, password, tipo, estado, verification_code)
+            VALUES (?, ?, ?, ?, ?, ?, 'usuario', 'pendiente', ?)`;
 
-        // Ejecución de la consulta con la contraseña hasheada
-        db.query(query, [nombre, apellidoPaterno, apellidoMaterno, correo, telefono || null, hashedPassword], (err, result) => {
+        // Ejecución de la consulta con la contraseña hasheada y el código de verificación
+        db.query(query, [nombre, apellidoPaterno, apellidoMaterno, correo, telefono || null, hashedPassword, verificationCode], (err, result) => {
             if (err) {
                 console.error('Error al insertar usuario en la base de datos:', err);
                 return res.status(500).json({ message: 'Error al registrar el usuario' });
             }
 
-            // Respuesta exitosa si se insertaron los datos
-            res.status(201).json({ message: 'Usuario registrado exitosamente' });
+            // Configuración del correo de verificación
+            const mailOptions = {
+                from: 'yarelihh2023@gmail.com',
+                to: correo,
+                subject: 'Verificación de correo electrónico',
+                text: `Tu código de verificación es: ${verificationCode}`
+            };
+
+            // Enviar el correo con el código de verificación
+            transporter.sendMail(mailOptions, (error, info) => {
+                if (error) {
+                    console.error("Error al enviar el correo:", error);
+                    return res.status(500).json({ message: "Error al enviar el correo de verificación", error: error.message });
+                }
+                console.log("Correo enviado:", info.response);
+                res.status(201).json({ message: "Usuario creado. Por favor verifica tu correo electrónico." });
+            });
         });
     });
 });
+
 
 
 router.post('/send-verification-email', (req, res) => { 
