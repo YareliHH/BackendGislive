@@ -4,7 +4,7 @@ const router = express.Router();
 
 // Ruta para insertar una nueva política de privacidad
 router.post('/insert', (req, res) => {
-    const { numero_politica, titulo, contenido } = req.body;
+    const {titulo, contenido } = req.body;
 
     // Verificar la versión más alta actual para asignar una nueva versión
     const selectQuery = 'SELECT MAX(CAST(version AS DECIMAL(5,2))) AS maxVersion FROM politicas_privacidad';
@@ -19,8 +19,8 @@ router.post('/insert', (req, res) => {
         const maxVersion = result[0].maxVersion ? Math.floor(parseFloat(result[0].maxVersion)) + 1 : 1;
 
         // Insertar la nueva política con la versión calculada (entera)
-        const insertQuery = 'INSERT INTO politicas_privacidad (numero_politica, titulo, contenido, estado, version) VALUES (?, ?, ?, ?, ?)';
-        connection.query(insertQuery, [numero_politica, titulo, contenido, 'activo', maxVersion.toFixed(2)], (err, result) => {
+        const insertQuery = 'INSERT INTO politicas_privacidad ( titulo, contenido, estado, version) VALUES (?, ?, ?, ?, ?)';
+        connection.query(insertQuery, [titulo, contenido, 'activo', maxVersion.toFixed(2)], (err, result) => {
             if (err) {
                 console.log(err);
                 return res.status(500).send('Error en el servidor al insertar nueva política');
