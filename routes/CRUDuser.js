@@ -2,9 +2,8 @@ const express = require('express');
 const router = express.Router();
 const connection = require('../Config/db');
 const bcrypt = require('bcryptjs'); // Importar bcrypt para comparar contraseñas
-const axios = require('axios'); // Para hacer la solicitud a Google reCAPTCHAAA
+const axios = require('axios'); // Para hacer la solicitud a Google reCAPTCHA
 
-const MAX_ATTEMPTS = 5; // Número máximo de intentos fallidos
 const LOCK_TIME_MINUTES = 20; // Tiempo de bloqueo en minutos
 
 router.post('/login', async (req, res) => {
@@ -44,7 +43,7 @@ router.post('/login', async (req, res) => {
         const usuario = results[0];
         const currentTime = Date.now(); // Obtener la hora actual
 
-        // Verificar intentos de inicio de sesión fallidos y bloqueo desde la tabla de intentos de login
+        // Verificar si el usuario está bloqueado
         const queryAttempts = 'SELECT * FROM login_attempts WHERE usuarios_id = ?';
         connection.query(queryAttempts, [usuario.id], (err, attemptsResult) => {
             if (err) {
@@ -54,12 +53,10 @@ router.post('/login', async (req, res) => {
 
             console.log('Resultados de intentos de login:', attemptsResult);
 
-            let loginAttempts = 0;
             let lockUntil = null;
 
             if (attemptsResult.length > 0) {
                 const attempt = attemptsResult[0];
-                loginAttempts = attempt.intentos_fallidos;
                 lockUntil = attempt.fecha_bloqueo;
             }
 
@@ -69,7 +66,7 @@ router.post('/login', async (req, res) => {
                 return res.status(403).json({ error: `Cuenta bloqueada. Inténtalo de nuevo en ${remainingTime} minutos.` });
             }
 
-            // Comparar la contraseña usando bcrypt
+            // Si no está bloqueado, comparar la contraseña
             bcrypt.compare(password, usuario.password, (err, isMatch) => {
                 if (err) {
                     console.error('Error al comparar contraseñas:', err);
@@ -80,16 +77,19 @@ router.post('/login', async (req, res) => {
                     console.log('Contraseña incorrecta');
 
                     // Incrementar el número de intentos fallidos
-                    loginAttempts += 1;
+                    let loginAttempts = 1;
                     let newLockUntil = null;
 
+                    if (attemptsResult.length > 0) {
+                        loginAttempts = attemptsResult[0].intentos_fallidos + 1;
+                    }
+
                     // Si los intentos fallidos alcanzan el máximo permitido, bloquear la cuenta
-                    if (loginAttempts >= MAX_ATTEMPTS) {
-                        newLockUntil = Date.now() + LOCK_TIME_MINUTES * 60 * 1000; // Tiempo de bloqueo en milisegundos
+                    if (loginAttempts >= 5) {
+                        newLockUntil = Date.now() + LOCK_TIME_MINUTES * 60 * 1000; // Bloqueo en milisegundos
                         loginAttempts = 0; // Reiniciar intentos después del bloqueo
                     }
 
-                    // Actualizar la tabla login_attempts con los intentos fallidos y el tiempo de bloqueo
                     const updateAttemptsQuery = `
                         INSERT INTO login_attempts (usuarios_id, intentos_fallidos, fecha_bloqueo)
                         VALUES (?, ?, ?)
@@ -108,7 +108,7 @@ router.post('/login', async (req, res) => {
                         return res.status(401).json({ error: 'Contraseña incorrecta' });
                     });
                 } else {
-                    // Restablecer los intentos fallidos y el bloqueo si la autenticación es exitosa
+                    // Restablecer intentos fallidos si la autenticación es exitosa
                     const resetAttemptsQuery = 'DELETE FROM login_attempts WHERE usuarios_id = ?';
                     connection.query(resetAttemptsQuery, [usuario.id], (err) => {
                         if (err) {
@@ -129,4 +129,3 @@ router.post('/login', async (req, res) => {
 });
 
 module.exports = router;
-
