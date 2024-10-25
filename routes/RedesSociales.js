@@ -1,5 +1,5 @@
 const express = require('express');
-const db = require('../db'); 
+const connection = require('../Config/db');
 const router = express.Router();
 
 function validateUrl(url) {

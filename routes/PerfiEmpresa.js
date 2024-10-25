@@ -1,5 +1,5 @@
 const express = require('express');
-const db = require('../db'); // Ruta correcta a tu archivo de configuración de base de datos
+const connection = require('../Config/db');// Ruta correcta a tu archivo de configuración de base de datos
 const multer = require('multer');
 const router = express.Router();
 

@@ -1,5 +1,5 @@
 const express = require('express');
-const db = require('../db'); // Asegúrate de que la ruta a tu conexión de base de datos sea correcta
+const connection = require('../Config/db'); // Asegúrate de que la ruta a tu conexión de base de datos sea correcta
 const router = express.Router();
 
 // Ruta para insertar una nueva política de privacidad
