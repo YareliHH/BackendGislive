@@ -4,7 +4,7 @@ const connection = require('../Config/db');
 
 
 // Ruta para insertar un nuevo deslinde legal
-router.post('/insert', (req, res) => {
+router.post('/deslinde', (req, res) => {
     const { titulo, contenido } = req.body;
 
     const selectQuery = 'SELECT MAX(CAST(version AS DECIMAL(5,2))) AS maxVersion FROM tbldeslinde_legal ';
