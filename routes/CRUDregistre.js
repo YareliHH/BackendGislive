@@ -104,7 +104,7 @@ router.post('/send-verification-email', (req, res) => {
              const verificationLink = `https://backendgislive.onrender.com/api/verify-email?token=${verificationToken}&email=${encodeURIComponent(email)}`;
 
              const mailOptions = {
-                from: 'Jehiely_24@hotmail.com',
+                from: '20221124@uthh.edu.mx',
                 to: email,
                 subject: 'Confirmación de Correo - Gislive Boutique',
                 html: `
