@@ -138,6 +138,25 @@ router.put('/updateLogo', (req, res, next) => {
     });
 });
 
+// Endpoint para obtener el perfil de la empresa
+router.get('/perfil_empresa/get', async (req, res) => {
+    const query = `SELECT * FROM perfil_empresa`;
+
+    connection.query(query, (err, results) => {
+        if (err) {
+            console.error(err);
+            return res.status(500).send('Error en el servidor');
+        }
+
+        if (results.length === 0) {
+            return res.status(404).send('No se encontraron perfiles de empresa');
+        }
+
+        res.status(200).json(results); // Devuelve todos los resultados como JSON
+    });
+});
+
+
 // Endpoint para actualizar
 router.put('/updateDatos', (req, res) => {
     console.log(req.body);  // <-- Verifica los datos que estás recibiendo en el backend
