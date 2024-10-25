@@ -36,7 +36,7 @@ router.post('/verificar-correo', (req, res) => {
 });
 
 // Endpoint para registrar un usuario
-router.post('/registro', async (req, res) => {
+router.post('/registro', (req, res) => {
     const { nombre, apellidoPaterno, apellidoMaterno, correo, telefono, password } = req.body;
 
     // Verificar que los campos requeridos están presentes
@@ -44,48 +44,30 @@ router.post('/registro', async (req, res) => {
         return res.status(400).json({ message: 'Todos los campos son obligatorios excepto el teléfono' });
     }
 
-    try {
-        // Hashear la contraseña antes de almacenarla
-        const hashedPassword = await bcrypt.hash(password, 10);
-
-        // Generar el código de verificación
-        const verificationCode = crypto.randomInt(100000, 999999).toString();
+    // Hashear la contraseña usando bcrypt
+    bcrypt.hash(password, 10, (err, hashedPassword) => {
+        if (err) {
+            console.error('Error al hashear la contraseña:', err);
+            return res.status(500).json({ message: 'Error al registrar el usuario' });
+        }
 
         // Consulta SQL para insertar los datos en la tabla 'usuarios'
         const query = `
-            INSERT INTO usuarios (nombre, apellido_paterno, apellido_materno, correo, telefono, password, tipo, estado, verification_code)
-            VALUES (?, ?, ?, ?, ?, ?, 'usuario', 'pendiente', ?)`; // Estado pendiente hasta que verifique
+        INSERT INTO usuarios (nombre, apellido_paterno, apellido_materno, correo, telefono, password, tipo, estado, verification_code)
+        VALUES (?, ?, ?, ?, ?, ?, 'usuario', 'pendiente', ?)`; // Estado pendiente hasta que verifique
 
-        // Ejecución de la consulta con la contraseña hasheada y el código de verificación
-        db.query(query, [nombre, apellidoPaterno, apellidoMaterno, correo, telefono || null, hashedPassword, verificationCode], (err, result) => {
+        // Ejecución de la consulta con la contraseña hasheada
+        db.query(query, [nombre, apellidoPaterno, apellidoMaterno, correo, telefono || null, hashedPassword], (err, result) => {
             if (err) {
                 console.error('Error al insertar usuario en la base de datos:', err);
                 return res.status(500).json({ message: 'Error al registrar el usuario' });
             }
 
-            // Configuración del correo de verificación
-            const mailOptions = {
-                from: 'yarelihh2023@gmail.com',
-                to: correo,
-                subject: 'Verificación de correo electrónico',
-                text: `Tu código de verificación es: ${verificationCode}`
-            };
-
-            // Enviar el correo con el código de verificación
-            transporter.sendMail(mailOptions, (error, info) => {
-                if (error) {
-                    console.error("Error al enviar el correo:", error);
-                    return res.status(500).json({ message: "Error al enviar el correo de verificación", error: error.message });
-                }
-                console.log("Correo enviado:", info.response);
-                res.status(201).json({ message: "Usuario creado. Por favor verifica tu correo electrónico." });
-            });
+            // Respuesta exitosa si se insertaron los datos
+            res.status(201).json({ message: 'Usuario registrado exitosamente' });
         });
-    } catch (error) {
-        console.error('Error en el proceso de registro:', error);
-        res.status(500).json({ message: 'Error al registrar el usuario' });
-    }
-});
+    });
+}); 
 
 
 
