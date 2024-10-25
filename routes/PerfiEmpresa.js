@@ -1,5 +1,5 @@
 const express = require('express');
-const connection = require('../Config/db'); // Ruta correcta a tu archivo de configuración de base de datos
+const connection = require('../Config/db'); // Asegúrate de que esta sea la ruta correcta a tu configuración de base de datos
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
 
@@ -8,7 +8,7 @@ const router = express.Router();
 const storage = multer.memoryStorage();
 const upload = multer({
     storage: storage,
-    limits: { fileSize: 1024 * 1024 * 10 }, // Límite de 10MB para archivos
+    limits: { fileSize: 1024 * 1024 * 10 },
     fileFilter: (req, file, cb) => {
         if (file.mimetype === 'image/jpeg' || file.mimetype === 'image/jpg' || file.mimetype === 'image/png') {
             cb(null, true);
@@ -18,7 +18,6 @@ const upload = multer({
     },
 });
 
-// Configuración directa de Cloudinary
 cloudinary.config({
     cloud_name: 'dytchcrpf',
     api_key: '997224391525815',
@@ -26,32 +25,20 @@ cloudinary.config({
 });
 
 // Endpoint para insertar el perfil de empresa
-router.post('/insert', (req, res, next) => {
-    upload.single('logo')(req, res, async (err) => {
-        if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
-            return res.status(400).send('El archivo es demasiado grande. El tamaño máximo permitido es de 10MB.');
-        } else if (err) {
-            return res.status(400).send(err.message);
-        }
-        next();
-    });
-}, async (req, res) => {
+router.post('/perfil', upload.single('logo'), async (req, res) => {
     const { nombre_empresa, direccion, telefono, correo_electronico, descripcion, slogan, titulo_pagina } = req.body;
-
-    if (!nombre_empresa || !correo_electronico) {
-        return res.status(400).send('Nombre de empresa y correo electrónico son obligatorios');
-    }
+    if (!nombre_empresa || !correo_electronico) return res.status(400).send('Nombre de empresa y correo electrónico son obligatorios');
 
     let logoUrl = null;
     if (req.file) {
         try {
-            const uploadResult = await cloudinary.uploader.upload_stream({
-                resource_type: 'image',
-                folder: 'logos_empresas'  // Carpeta en Cloudinary
-            }, (error, result) => {
-                if (error) throw error;
-                return result;
-            });
+            const uploadResult = await cloudinary.uploader.upload_stream(
+                { resource_type: 'image', folder: 'logos_empresas' },
+                (error, result) => {
+                    if (error) throw error;
+                    return result;
+                }
+            );
             logoUrl = uploadResult.secure_url;
         } catch (uploadError) {
             console.error(uploadError);
@@ -59,12 +46,10 @@ router.post('/insert', (req, res, next) => {
         }
     }
 
-    const query = `INSERT INTO perfil_empresa 
-                   (nombre_empresa, direccion, telefono, correo_electronico, descripcion, logo_url, slogan, titulo_pagina) 
+    const query = `INSERT INTO perfil_empresa (nombre_empresa, direccion, telefono, correo_electronico, descripcion, logo_url, slogan, titulo_pagina) 
                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
 
-    connection.query(query, [nombre_empresa, direccion, telefono, correo_electronico, descripcion, logoUrl, slogan, titulo_pagina], 
-    (err, result) => {
+    connection.query(query, [nombre_empresa, direccion, telefono, correo_electronico, descripcion, logoUrl, slogan, titulo_pagina], (err) => {
         if (err) {
             console.log(err);
             return res.status(500).send('Error en el servidor');
@@ -73,28 +58,40 @@ router.post('/insert', (req, res, next) => {
     });
 });
 
-// Endpoint para obtener el perfil de empresa
-router.get('/get', (req, res) => {
-    const query = `SELECT * FROM perfil_empresa LIMIT 1`;
-    db.query(query, (err, results) => {
+// Endpoint para actualizar el perfil de empresa
+router.put('/updateDatos', upload.single('logo'), async (req, res) => {
+    const { id_empresa, nombre_empresa, direccion, telefono, correo_electronico, descripcion, slogan, titulo_pagina } = req.body;
+    let logoUrl = null;
+    if (req.file) {
+        try {
+            const uploadResult = await cloudinary.uploader.upload_stream(
+                { resource_type: 'image', folder: 'logos_empresas' },
+                (error, result) => {
+                    if (error) throw error;
+                    return result;
+                }
+            );
+            logoUrl = uploadResult.secure_url;
+        } catch (uploadError) {
+            console.error(uploadError);
+            return res.status(500).send('Error al subir el logo a Cloudinary');
+        }
+    }
+
+    const query = `UPDATE perfil_empresa SET nombre_empresa = ?, direccion = ?, telefono = ?, correo_electronico = ?, descripcion = ?, 
+                   slogan = ?, titulo_pagina = ?, logo_url = ? WHERE id_empresa = ?`;
+    const values = [nombre_empresa, direccion, telefono, correo_electronico, descripcion, slogan, titulo_pagina, logoUrl, id_empresa];
+
+    connection.query(query, values, (err) => {
         if (err) {
             console.log(err);
             return res.status(500).send('Error en el servidor');
         }
-        if (results.length === 0) {
-            return res.status(404).send('Perfil de empresa no encontrado');
-        }
-
-        const perfilEmpresa = results[0];
-
-        // Convertir el logo (longblob) a base64
-        if (perfilEmpresa.logo) {
-            perfilEmpresa.logo = perfilEmpresa.logo.toString('base64');
-        }
-
-        res.status(200).json(perfilEmpresa); // Devuelve el resultado con los nuevos campos incluidos
+        res.status(200).send('Perfil de empresa actualizado con éxito');
     });
 });
+
+module.exports = router;
 
 
 // Endpoint para actualizar el logo de la empresa
