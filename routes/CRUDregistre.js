@@ -1,16 +1,53 @@
 const express = require('express');
 const router = express.Router();
-const bcrypt = require('bcryptjs'); // Importar bcrypt para hashear contraseñas
-const db = require('../Config/db'); // Conexión a la base de datos desde db.jsssss
+const bcrypt = require('bcryptjs'); // Para hashear contraseñas
+const db = require('../Config/db'); // Conexión a la base de datos
 const nodemailer = require('nodemailer');
 
-// Configuración de nodemailer
+// Configuración de nodemailer para envío de correos
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
         user: 'yarelihh2023@gmail.com',
-        pass: 'fgpn vbfd cord nxvu',
+        pass: 'fgpn vbfd cord nxvu', // Se recomienda usar variables de entorno para contraseñas
     },
+});
+
+// Función para generar un token aleatorio
+const generateToken = () => {
+    return Math.random().toString(36).substring(2, 8).toUpperCase();
+};
+
+// Endpoint para registrar un usuario
+router.post('/registro', (req, res) => {
+    const { nombre, apellidoPaterno, apellidoMaterno, correo, telefono, password } = req.body;
+
+    // Verificación de campos requeridos
+    if (!nombre || !apellidoPaterno || !apellidoMaterno || !correo || !password) {
+        return res.status(400).json({ message: 'Todos los campos son obligatorios excepto el teléfono' });
+    }
+
+    // Hashear la contraseña con bcrypt
+    bcrypt.hash(password, 10, (err, hashedPassword) => {
+        if (err) {
+            console.error('Error al hashear la contraseña:', err);
+            return res.status(500).json({ message: 'Error al registrar el usuario' });
+        }
+
+        // Consulta SQL para insertar en la tabla 'usuarios'
+        const query = `
+            INSERT INTO usuarios (nombre, apellido_paterno, apellido_materno, correo, telefono, password, tipo, estado)
+            VALUES (?, ?, ?, ?, ?, ?, 'usuario', 'activo')`;
+
+        db.query(query, [nombre, apellidoPaterno, apellidoMaterno, correo, telefono || null, hashedPassword], (err, result) => {
+            if (err) {
+                console.error('Error al insertar usuario en la base de datos:', err);
+                return res.status(500).json({ message: 'Error al registrar el usuario' });
+            }
+
+            res.status(201).json({ message: 'Usuario registrado exitosamente' });
+        });
+    });
 });
 
 // Endpoint para verificar si el correo existe
@@ -18,7 +55,6 @@ router.post('/verificar-correo', (req, res) => {
     const { correo } = req.body;
 
     const query = `SELECT * FROM usuarios WHERE correo = ?`;
-
     db.query(query, [correo], (err, results) => {
         if (err) {
             console.error('Error al verificar el correo en la base de datos:', err);
@@ -29,82 +65,45 @@ router.post('/verificar-correo', (req, res) => {
             // Si se encuentra el correo, retornamos que ya existe
             res.status(200).json({ exists: true });
         } else {
-            // Si no se encuentra, retornamos que no existe
             res.status(200).json({ exists: false });
         }
     });
 });
 
-// Endpoint para registrar un usuario
-router.post('/registro', (req, res) => {
-    const { nombre, apellidoPaterno, apellidoMaterno, correo, telefono, password } = req.body;
+// Endpoint para enviar correo de verificación
+router.post('/send-verification-email', (req, res) => {
+    const { correo } = req.body;
 
-    // Verificar que los campos requeridos están presentes
-    if (!nombre || !apellidoPaterno || !apellidoMaterno || !correo || !password) {
-        return res.status(400).json({ message: 'Todos los campos son obligatorios excepto el teléfono' });
-    }
-
-    // Hashear la contraseña usando bcrypt
-    bcrypt.hash(password, 10, (err, hashedPassword) => {
-        if (err) {
-            console.error('Error al hashear la contraseña:', err);
-            return res.status(500).json({ message: 'Error al registrar el usuario' });
-        }
-
-        // Consulta SQL para insertar los datos en la tabla 'usuarios'
-        const query = `
-            INSERT INTO usuarios (nombre, apellido_paterno, apellido_materno, correo, telefono, password, tipo, estado)
-            VALUES (?, ?, ?, ?, ?, ?, 'usuario', 'activo')`;
-
-        // Ejecución de la consulta con la contraseña hasheada
-        db.query(query, [nombre, apellidoPaterno, apellidoMaterno, correo, telefono || null, hashedPassword], (err, result) => {
-            if (err) {
-                console.error('Error al insertar usuario en la base de datos:', err);
-                return res.status(500).json({ message: 'Error al registrar el usuario' });
-            }
-
-            // Respuesta exitosa si se insertaron los datos
-            res.status(201).json({ message: 'Usuario registrado exitosamente' });
-        });
-    });
-}); 
-
-router.post('/send-verification-email', (req, res) => { 
-    const { email } = req.body;
-
-    const checkUserSql = 'SELECT * FROM usuarios WHERE email = ?';
-    db.query(checkUserSql, [email], (err, result) => {
+    const checkUserSql = 'SELECT * FROM usuarios WHERE correo = ?';
+    db.query(checkUserSql, [correo], (err, result) => {
         if (err) {
             return res.status(500).json({ message: 'Error al verificar el correo electrónico.' });
         }
 
         if (result.length > 0 && result[0].verificado === 1) {
-            return res.status(400).json({ message: 'El correo electrónico ya está registrado.' });
+            return res.status(400).json({ message: 'El correo electrónico ya está registrado y verificado.' });
         }
 
-        if (result.length > 0) {
-            return res.status(400).json({ message: 'El correo electrónico ya está registrado.' });
-        }
-        // Generar token
+        // Generar token de verificación
         const verificationToken = generateToken();
-
         const tokenExpiration = new Date(Date.now() + 900000); // Expira en 15 minutos
 
         const sql = `
-            INSERT INTO usuarios (email, token_verificacion, token_expiracion, verificado)
-            VALUES (?, ?, ?, 0)
+            UPDATE usuarios SET token_verificacion = ?, token_expiracion = ?, verificado = 0 WHERE correo = ?
         `;
-        db.query(sql, [email, verificationToken, tokenExpiration], async (err, result) => {
+
+        db.query(sql, [verificationToken, tokenExpiration, correo], async (err, result) => {
             if (err) {
                 return res.status(500).json({ message: 'Error al generar el token de verificación.' });
             }
 
-             // Generar el enlace de verificación correctamente
-             const verificationLink = `https://backendgislive.onrender.com/api/verify-email?token=${verificationToken}&email=${encodeURIComponent(email)}`;
+            // Generar enlace de verificación
+            const verificationLink = `https://backendgislive.onrender.com/api/verify-email?token=${verificationToken}&correo=${encodeURIComponent(correo)}`;
 
-             const mailOptions = {
+            // Opciones de correo
+            const mailOptions = {
                 from: '20221124@uthh.edu.mx',
-                to: email,
+                to: correo,
                 subject: 'Confirmación de Correo - Gislive Boutique',
                 html: `
                     <div style="font-family: Arial, sans-serif; color: #333;">
@@ -123,8 +122,8 @@ router.post('/send-verification-email', (req, res) => {
                     </div>
                 `,
             };
-            
 
+            // Enviar correo
             try {
                 await transporter.sendMail(mailOptions);
                 res.status(200).json({ message: 'Correo de verificación enviado.' });
@@ -136,4 +135,3 @@ router.post('/send-verification-email', (req, res) => {
 });
 
 module.exports = router;
-
