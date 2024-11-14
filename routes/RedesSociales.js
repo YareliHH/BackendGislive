@@ -3,7 +3,7 @@ const connection = require('../Config/db');
 const router = express.Router();
 
 function validateUrl(url) {
-    return url.length > 0; // Validación mínima, solo que no esté vacío
+    return url.length > 0; 
 }
 
 // Endpoint para obtener todas las redes sociales
