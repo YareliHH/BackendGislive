@@ -1,6 +1,7 @@
 const express = require('express');
-const connection = require('../Config/db');
+const db = require('../db'); 
 const router = express.Router();
+
 
 function validateUrl(url) {
     return url.length > 0; 
@@ -54,7 +55,7 @@ router.put('/editar/:id', (req, res) => {
         if (result.affectedRows === 0) {
             return res.status(404).send('Red social no encontrada');
         }
-        res.status(200).send('Red social actualizada con éxito');
+        res.status(200).send('Red social actualizada');
     });
 });
 
@@ -71,8 +72,19 @@ router.delete('/eliminar/:id', (req, res) => {
         if (result.affectedRows === 0) {
             return res.status(404).send('Red social no encontrada');
         }
-        res.status(200).send('Red social eliminada con éxito');
+        res.status(200).send('Red social eliminada');
     });
 });
+// Endpoint para obtener todas las redes sociales
+router.get('/sociales', (req, res) => {
+    const sql = 'SELECT * FROM redes_sociales';
+    db.query(sql, (err, result) => {
+      if (err) {
+        return res.status(500).json({ message: 'Error al obtener las redes sociales.' });
+      }
+      res.status(200).json(result);
+    });
+  });
+  
 
 module.exports = router;
