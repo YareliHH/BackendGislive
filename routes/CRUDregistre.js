@@ -140,7 +140,7 @@ router.post('/registro', (req, res) => {
 });
 
 // Recuperación de contraseña
-router.post('/recuperacion', async (req, res) => {
+router.post('/recuperacion_contra', async (req, res) => {
     const { correo } = req.body;  // Cambiado a 'correo' para coincidir con el frontend
 
     console.log(`Intento de recuperación de contraseña para el correo: ${correo}`);
@@ -176,9 +176,9 @@ router.post('/recuperacion', async (req, res) => {
 
             // Configuración del correo electrónico de recuperación
             const mailOptions = {
-                from: 'odontologiacarol2024@gmail.com',
+                from: '20221124@uthh.edu.mx',
                 to: correo,
-                subject: 'Recuperación de Contraseña - Odontología Carol',
+                subject: 'Confirmación de Correo - Gislive Boutique',
                 html: `
                     <div style="font-family: Arial, sans-serif; color: #333;">
                         <div style="text-align: center; padding: 20px;">
