@@ -141,19 +141,20 @@ router.post('/registro', (req, res) => {
 
 // Recuperación de contraseña
 router.post('/recuperacion', async (req, res) => {
-    const { email } = req.body;
+    const { correo } = req.body;  // Cambiado a 'correo' para coincidir con el frontend
 
-    console.log(`Intento de recuperación de contraseña para el email: ${email}`);
+    console.log(`Intento de recuperación de contraseña para el correo: ${correo}`);
 
     // Validar formato de correo electrónico
-    if (!validateEmail(email)) {
+    if (!validateEmail(correo)) {
         return res.status(400).json({ message: 'Formato de correo inválido.' });
     }
 
     // Verificar si el correo existe en la tabla `usuarios`
     const checkUserSql = 'SELECT * FROM usuarios WHERE correo = ?';
-    db.query(checkUserSql, [xss(email)], (err, result) => {
+    db.query(checkUserSql, [xss(correo)], (err, result) => {
         if (err) {
+            console.error('Error al verificar el correo electrónico:', err);
             return res.status(500).json({ message: 'Error al verificar el correo electrónico.' });
         }
 
@@ -167,15 +168,16 @@ router.post('/recuperacion', async (req, res) => {
 
         // Actualizar la tabla `usuarios` con el token de verificación y la expiración
         const updateTokenSql = 'UPDATE usuarios SET token_verificacion = ?, token_expiracion = ? WHERE correo = ?';
-        db.query(updateTokenSql, [token, tokenExpiration, email], (err, result) => {
+        db.query(updateTokenSql, [token, tokenExpiration, correo], (err, result) => {
             if (err) {
+                console.error('Error al actualizar el token de recuperación:', err);
                 return res.status(500).json({ message: 'Error al generar el token de recuperación.' });
             }
 
             // Configuración del correo electrónico de recuperación
             const mailOptions = {
                 from: 'odontologiacarol2024@gmail.com',
-                to: email,
+                to: correo,
                 subject: 'Recuperación de Contraseña - Odontología Carol',
                 html: `
                     <div style="font-family: Arial, sans-serif; color: #333;">
@@ -205,7 +207,7 @@ router.post('/recuperacion', async (req, res) => {
                     console.error('Error al enviar el correo de recuperación:', err);
                     return res.status(500).json({ message: 'Error al enviar el correo de recuperación.' });
                 }
-                console.log(`Correo de recuperación enviado correctamente a: ${email}`);
+                console.log(`Correo de recuperación enviado correctamente a: ${correo}`);
                 res.status(200).json({ message: 'Se ha enviado un enlace de recuperación a tu correo.' });
             });
         });
