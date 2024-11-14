@@ -17,9 +17,27 @@ app.use(cors({
         'https://gisliveboutique.onrender.com',
         'https://gisliveboutique.isoftuthh.com',
         'https://backendgislive.onrender.com'
-    ], // Dominios permitidos
-    credentials: true  // Permitir el envío de cookies y credenciales
+    ],
+    credentials: true
 }));
+
+// Middleware para asegurar que las solicitudes OPTIONS obtienen una respuesta de CORS
+app.options('*', cors({
+    origin: [
+        'https://gisliveboutique.onrender.com',
+        'https://gisliveboutique.isoftuthh.com',
+        'https://backendgislive.onrender.com'
+    ],
+    credentials: true
+}));
+
+// Middleware de prueba para ver el comportamiento de CORS
+app.use((req, res, next) => {
+    res.header("Access-Control-Allow-Origin", "*"); // Permitir todas las solicitudes (solo para diagnóstico)
+    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
+    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    next();
+});
 
 // Middleware para parsear el cuerpo de las solicitudes en formato JSON
 app.use(bodyParser.json());
