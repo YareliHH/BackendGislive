@@ -139,4 +139,86 @@ router.post('/registro', (req, res) => {
     });
 });
 
+//recuperacion de contraseña
+router.post('/recuperacion', async (req, res) => {
+    const { email } = req.body;
+    const ipAddress = req.ip;
+
+    try {
+        // Limitar los intentos de recuperación desde la misma IP
+        await rateLimiter.consume(ipAddress);
+        console.log(`Intento de recuperación de contraseña para el email: ${email} desde la IP: ${ipAddress}`);
+
+        // Validar formato de correo electrónico
+        if (!validateEmail(email)) {
+            return res.status(400).json({ message: 'Formato de correo inválido.' });
+        }
+
+        // Verificar si el correo existe en la tabla `usuarios`
+        const checkUserSql = 'SELECT * FROM usuarios WHERE correo = ?';
+        db.query(checkUserSql, [xss(email)], (err, result) => {
+            if (err) {
+                return res.status(500).json({ message: 'Error al verificar el correo electrónico.' });
+            }
+
+            if (result.length === 0) {
+                return res.status(404).json({ message: 'No existe una cuenta con este correo electrónico.' });
+            }
+
+            // Generar un token de recuperación y establecer expiración (15 minutos)
+            const token = generateToken();
+            const tokenExpiration = new Date(Date.now() + 900000); // Expira en 15 minutos
+
+            // Actualizar la tabla `usuarios` con el token de verificación y la expiración
+            const updateTokenSql = 'UPDATE usuarios SET token_verificacion = ?, token_expiracion = ? WHERE correo = ?';
+            db.query(updateTokenSql, [token, tokenExpiration, email], (err, result) => {
+                if (err) {
+                    return res.status(500).json({ message: 'Error al generar el token de recuperación.' });
+                }
+
+                // Configuración del correo electrónico de recuperación
+                const mailOptions = {
+                    from: 'odontologiacarol2024@gmail.com',
+                    to: email,
+                    subject: 'Recuperación de Contraseña - Odontología Carol',
+                    html: `
+                        <div style="font-family: Arial, sans-serif; color: #333;">
+                            <div style="text-align: center; padding: 20px;">
+                                <h1 style="color: #1976d2;">Odontología Carol</h1>
+                                <p>¡Hola!</p>
+                                <p>Hemos recibido una solicitud para restablecer tu contraseña en <b>Odontología Carol</b>.</p>
+                                <p>Si no realizaste esta solicitud, puedes ignorar este correo. De lo contrario, utiliza el siguiente código para restablecer tu contraseña:</p>
+                                <div style="padding: 10px; background-color: #f0f0f0; border-radius: 5px; display: inline-block; margin: 20px 0;">
+                                    <span style="font-size: 24px; font-weight: bold; color: #1976d2;">${token}</span>
+                                </div>
+                                <p style="color: #d32f2f; font-weight: bold; font-size: 18px;">El token debe ser copiado tal y como está, respetando mayúsculas, minúsculas y guiones.</p>
+                                <p><b>Nota:</b> Este código caduca en 15 minutos.</p>
+                                <hr style="margin: 20px 0;">
+                                <footer>
+                                    <p>Odontología Carol - Cuidando de tu salud bucal</p>
+                                    <p>Este es un correo generado automáticamente, por favor no respondas a este mensaje.</p>
+                                </footer>
+                            </div>
+                        </div>
+                    `,
+                };
+
+                // Enviar el correo electrónico
+                transporter.sendMail(mailOptions, (err, info) => {
+                    if (err) {
+                        console.error('Error al enviar el correo de recuperación:', err);
+                        return res.status(500).json({ message: 'Error al enviar el correo de recuperación.' });
+                    }
+                    console.log(`Correo de recuperación enviado correctamente a: ${email}`);
+                    res.status(200).json({ message: 'Se ha enviado un enlace de recuperación a tu correo.' });
+                });
+            });
+        });
+    } catch (rateLimiterError) {
+        console.warn(`Demasiados intentos de recuperación de contraseña desde la IP: ${ipAddress}`);
+        return res.status(429).json({ message: 'Demasiados intentos. Inténtalo más tarde.' });
+    }
+});
+
+
 module.exports = router;
