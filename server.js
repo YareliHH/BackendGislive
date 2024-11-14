@@ -1,3 +1,5 @@
+// server.js
+
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors'); 
@@ -13,15 +15,19 @@ const app = express();
 
 // Configuración de CORS para permitir solicitudes desde dominios específicos
 app.use(cors({
-    origin: [
-        'https://gisliveboutique.onrender.com',
-        'https://gisliveboutique.isoftuthh.com',
-        'https://backendgislive.onrender.com'
-    ], 
-    credentials: true  // Permitir el envío de cookies y credenciales
+    origin: 'https://gisliveboutique.onrender.com', // Especifica el dominio del frontend
+    credentials: true, // Permitir envío de cookies y credenciales
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Métodos permitidos
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'], // Encabezados permitidos
 }));
 
-// Middleware para analizar el cuerpo de las solicitudes en formato JSON
+// Middleware para responder a solicitudes OPTIONS (preflight) para verificación de CORS
+app.options('*', cors({
+    origin: 'https://gisliveboutique.onrender.com',
+    credentials: true,
+}));
+
+// Middleware para analizar JSON en el cuerpo de las solicitudes
 app.use(bodyParser.json());
 
 // Definir las rutas de la API
@@ -38,3 +44,5 @@ const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
     console.log(`Servidor ejecutándose en el puerto ${PORT}`);
 });
+
+module.exports = app; // Exporta `app` si necesitas realizar pruebas
