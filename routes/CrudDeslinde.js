@@ -100,7 +100,7 @@ router.put('/deactivate/:id', (req, res) => {
     });
 });
 
-// Ruta para obtener todas las políticas de privacidad activas
+// Ruta para obtener todas las políticas de privacidad activass
 router.get('/getdeslinde', (req, res) => {
     const query = 'SELECT * FROM  tbldeslinde_legal WHERE estado = "activo" ORDER BY id';
 
