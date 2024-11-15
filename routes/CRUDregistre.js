@@ -139,79 +139,78 @@ router.post('/registro', (req, res) => {
     });
 });
 
-// Recuperación de contraseña
-router.post('/recuperacion_contra', async (req, res) => {
-    const { correo } = req.body;  // Cambiado a 'correo' para coincidir con el frontend
-
-    console.log(`Intento de recuperación de contraseña para el correo: ${correo}`);
-
-    // Validar formato de correo electrónico
-    if (!validateEmail(correo)) {
-        return res.status(400).json({ message: 'Formato de correo inválido.' });
-    }
+// Endpoint para recuperación de contraseña
+router.post('/recuperacion_contra', (req, res) => {
+    const { correo } = req.body;
 
     // Verificar si el correo existe en la tabla `usuarios`
     const checkUserSql = 'SELECT * FROM usuarios WHERE correo = ?';
-    db.query(checkUserSql, [xss(correo)], (err, result) => {
+    db.query(checkUserSql, [correo], (err, result) => {
         if (err) {
-            console.error('Error al verificar el correo electrónico:', err);
+            console.error('Error al verificar el correo electrónico en la base de datos:', err);
             return res.status(500).json({ message: 'Error al verificar el correo electrónico.' });
         }
 
+        // Si el correo no existe, responder con un mensaje de error
         if (result.length === 0) {
             return res.status(404).json({ message: 'No existe una cuenta con este correo electrónico.' });
         }
 
         // Generar un token de recuperación y establecer expiración (15 minutos)
-        const token = generateToken();
-        const tokenExpiration = new Date(Date.now() + 900000); // Expira en 15 minutos
+        const verificationToken = generateToken();
+        const tokenExpiration = new Date(Date.now() + 15 * 60 * 1000); // Expira en 15 minutos
 
         // Actualizar la tabla `usuarios` con el token de verificación y la expiración
-        const updateTokenSql = 'UPDATE usuarios SET token_verificacion = ?, token_expiracion = ? WHERE correo = ?';
-        db.query(updateTokenSql, [token, tokenExpiration, correo], (err, result) => {
+        const updateTokenSql = `
+            UPDATE usuarios 
+            SET token_verificacion = ?, token_expiracion = ? 
+            WHERE correo = ?
+        `;
+        db.query(updateTokenSql, [verificationToken, tokenExpiration, correo], (err) => {
             if (err) {
-                console.error('Error al actualizar el token de recuperación:', err);
+                console.error('Error al actualizar el token de recuperación en la base de datos:', err);
                 return res.status(500).json({ message: 'Error al generar el token de recuperación.' });
             }
 
-            // Configuración del correo electrónico de recuperación
-            const mailOptions = {
-                from: '20221124@uthh.edu.mx',
-                to: correo,
-                subject: 'Confirmación de Correo - Gislive Boutique',
-                html: `
-                    <div style="font-family: Arial, sans-serif; color: #333;">
-                        <div style="text-align: center; padding: 20px;">
-                            <h1 style="color: #1976d2;">Odontología Carol</h1>
-                            <p>¡Hola!</p>
-                            <p>Hemos recibido una solicitud para restablecer tu contraseña en <b>Odontología Carol</b>.</p>
-                            <p>Si no realizaste esta solicitud, puedes ignorar este correo. De lo contrario, utiliza el siguiente código para restablecer tu contraseña:</p>
-                            <div style="padding: 10px; background-color: #f0f0f0; border-radius: 5px; display: inline-block; margin: 20px 0;">
-                                <span style="font-size: 24px; font-weight: bold; color: #1976d2;">${token}</span>
-                            </div>
-                            <p style="color: #d32f2f; font-weight: bold; font-size: 18px;">El token debe ser copiado tal y como está, respetando mayúsculas, minúsculas y guiones.</p>
-                            <p><b>Nota:</b> Este código caduca en 15 minutos.</p>
-                            <hr style="margin: 20px 0;">
-                            <footer>
-                                <p>Odontología Carol - Cuidando de tu salud bucal</p>
-                                <p>Este es un correo generado automáticamente, por favor no respondas a este mensaje.</p>
-                            </footer>
-                        </div>
-                    </div>
-                `,
-            };
-
-            // Enviar el correo electrónico
-            transporter.sendMail(mailOptions, (err, info) => {
-                if (err) {
-                    console.error('Error al enviar el correo de recuperación:', err);
-                    return res.status(500).json({ message: 'Error al enviar el correo de recuperación.' });
-                }
-                console.log(`Correo de recuperación enviado correctamente a: ${correo}`);
-                res.status(200).json({ message: 'Se ha enviado un enlace de recuperación a tu correo.' });
-            });
+            // Enviar correo de recuperación
+            sendRecoveryEmail(correo, verificationToken, res);
         });
     });
 });
+
+// Función para enviar el correo de recuperación de contraseña
+const sendRecoveryEmail = async (correo, verificationToken, res) => {
+    const mailOptions = {
+        from: '20221124@uthh.edu.mx',
+        to: correo,
+        subject: 'Recuperación de Contraseña - Gislive Boutique',
+        html: `
+            <div style="font-family: Arial, sans-serif; color: #333;">
+                <div style="text-align: center; padding: 20px;">
+                    <h1 style="color: #1976d2;">Gislive Boutique</h1>
+                    <p>Hemos recibido una solicitud para restablecer tu contraseña.</p>
+                    <p>Utiliza el siguiente código para completar el proceso de recuperación:</p>
+                    <div style="padding: 10px; background-color: #f0f0f0; border-radius: 5px; display: inline-block; margin: 20px 0;">
+                        <span style="font-size: 24px; font-weight: bold; color: #1976d2;">${verificationToken}</span>
+                    </div>
+                    <p><b>Nota:</b> Este código expira en 15 minutos.</p>
+                    <hr style="margin: 20px 0;">
+                    <footer>
+                        <p>Gislive Boutique - Cuidando tu experiencia de usuario</p>
+                        <p>Este es un correo generado automáticamente, por favor no respondas a este mensaje.</p>
+                    </footer>
+                </div>
+            </div>
+        `,
+    };
+
+    try {
+        await transporter.sendMail(mailOptions);
+        res.status(200).json({ message: 'Se ha enviado un correo de recuperación.' });
+    } catch (mailError) {
+        console.error('Error al enviar el correo de recuperación:', mailError);
+        res.status(500).json({ message: 'Error al enviar el correo de recuperación.' });
+    }
+};
 
 module.exports = router;
