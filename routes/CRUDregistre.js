@@ -213,4 +213,88 @@ const sendRecoveryEmail = async (correo, verificationToken, res) => {
     }
 };
 
+// Endpoint para verificar el token de recuperación de contraseña
+router.post('/verify-tokene', (req, res) => {
+    const { correo, token } = req.body;
+
+    if (!correo || !token) {
+        return res.status(400).json({ message: 'Correo y token son requeridos.' });
+    }
+
+    // Consulta para verificar que el token existe y que no ha expirado
+    const query = `
+        SELECT * FROM usuarios 
+        WHERE correo = ? 
+          AND token_verificacion = ? 
+          AND token_expiracion > NOW()
+    `;
+    db.query(query, [correo, token], (err, results) => {
+        if (err) {
+            console.error('Error al verificar el token en la base de datos:', err);
+            return res.status(500).json({ message: 'Error al verificar el token.' });
+        }
+
+        // Si no se encuentra un registro, el token es inválido o ha expirado
+        if (results.length === 0) {
+            return res.status(400).json({ valid: false, message: 'Token inválido o expirado.' });
+        }
+
+        // Si el token es válido, retornar una respuesta exitosa
+        res.status(200).json({ valid: true, message: 'Token verificado correctamente.' });
+    });
+});
+
+// Endpoint para restablecer la contraseña
+router.post('/resetPassword', async (req, res) => {
+    const { token, newPassword } = req.body;
+
+    if (!token || !newPassword) {
+        return res.status(400).json({ message: 'Token y nueva contraseña son requeridos.' });
+    }
+
+    try {
+        // Verificar si el token es válido y no ha expirado
+        const query = `
+            SELECT * FROM usuarios 
+            WHERE token_verificacion = ? 
+              AND token_expiracion > NOW()
+              AND registro_completo = 1
+        `;
+        db.query(query, [token], async (err, results) => {
+            if (err) {
+                console.error('Error al verificar el token:', err);
+                return res.status(500).json({ message: 'Error al verificar el token.' });
+            }
+
+            // Si no se encuentra el token, es inválido o ha expirado
+            if (results.length === 0) {
+                return res.status(400).json({ message: 'El token es inválido o ha expirado.' });
+            }
+
+            const userId = results[0].id;
+
+            // Hashear la nueva contraseña
+            const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+            // Actualizar la contraseña del usuario e invalidar el token
+            const updateQuery = `
+                UPDATE usuarios 
+                SET password = ?, token_verificacion = NULL, token_expiracion = NULL
+                WHERE id = ?
+            `;
+            db.query(updateQuery, [hashedPassword, userId], (updateErr) => {
+                if (updateErr) {
+                    console.error('Error al actualizar la contraseña:', updateErr);
+                    return res.status(500).json({ message: 'Error al actualizar la contraseña.' });
+                }
+
+                res.status(200).json({ message: 'Contraseña actualizada correctamente.' });
+            });
+        });
+    } catch (error) {
+        console.error('Error en el proceso de restablecimiento de contraseña:', error);
+        res.status(500).json({ message: 'Error al procesar la solicitud de restablecimiento de contraseña.' });
+    }
+});
+
 module.exports = router;
