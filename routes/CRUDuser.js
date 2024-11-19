@@ -1,9 +1,17 @@
 const express = require('express');
+const cors = require('cors'); // Middleware para manejar CORS
 const router = express.Router();
 const connection = require('../Config/db');
-const bcrypt = require('bcryptjs'); // Para comparar contraseñas
-const crypto = require('crypto'); // Para generar el token de sesión
-const axios = require('axios'); // Para reCAPTCHA
+const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
+const axios = require('axios');
+
+// Configurar CORS con soporte para cookies
+const corsOptions = {
+    origin: 'http://localhost:3000', // Cambia esto por la URL de tu frontend
+    credentials: true, // Permitir envío de cookies
+};
+router.use(cors(corsOptions)); // Habilitar CORS en este router
 
 const LOCK_TIME_MINUTES = 20; // Tiempo de bloqueo en minutos
 
@@ -36,15 +44,13 @@ router.post('/login', async (req, res) => {
             return res.status(500).json({ error: 'Error en la base de datos' });
         }
 
-        console.log('Resultados de la consulta de usuario:', results);
-
         if (results.length === 0) {
             console.log('Usuario no encontrado:', correo);
             return res.status(401).json({ error: 'Usuario no encontrado' });
         }
 
         const usuario = results[0];
-        const currentTime = Date.now(); // Hora actual en milisegundos
+        const currentTime = Date.now();
 
         // Verificar si el usuario está bloqueado
         const queryAttempts = 'SELECT * FROM login_attempts WHERE usuarios_id = ?';
@@ -62,7 +68,7 @@ router.post('/login', async (req, res) => {
             }
 
             if (lockUntil && currentTime < lockUntil) {
-                const remainingTime = Math.round((lockUntil - currentTime) / 60000); // Convertir ms a minutos
+                const remainingTime = Math.round((lockUntil - currentTime) / 60000);
                 return res.status(403).json({ error: `Cuenta bloqueada. Inténtalo de nuevo en ${remainingTime} minutos.` });
             }
 
@@ -82,7 +88,7 @@ router.post('/login', async (req, res) => {
                     }
 
                     if (loginAttempts >= 5) {
-                        newLockUntil = Date.now() + LOCK_TIME_MINUTES * 60 * 1000; // Bloqueo en milisegundos
+                        newLockUntil = Date.now() + LOCK_TIME_MINUTES * 60 * 1000;
                         loginAttempts = 0;
                     }
 
@@ -104,10 +110,8 @@ router.post('/login', async (req, res) => {
                         return res.status(401).json({ error: 'Contraseña incorrecta' });
                     });
                 } else {
-                    // Generar el token de sesión
                     const sessionToken = crypto.randomBytes(64).toString('hex');
 
-                    // Guardar el token en la columna `cookie` de la base de datos
                     const updateTokenQuery = 'UPDATE usuarios SET cookie = ? WHERE id = ?';
                     connection.query(updateTokenQuery, [sessionToken, usuario.id], (err) => {
                         if (err) {
@@ -115,18 +119,17 @@ router.post('/login', async (req, res) => {
                             return res.status(500).json({ error: 'Error al procesar el inicio de sesión' });
                         }
 
-                        // Establecer cookie en la respuesta
                         res.cookie('COOKIES', sessionToken, {
                             httpOnly: true,
-                            secure: process.env.NODE_ENV === 'production', // Activar en producción
-                            sameSite: 'Lax',
-                            maxAge: 24 * 60 * 60 * 1000 // 1 día
+                            secure: false, // Cambiar a true en producción con HTTPS
+                            sameSite: 'None', // Configuración para frontend y backend en diferentes dominios
+                            maxAge: 24 * 60 * 60 * 1000,
                         });
 
                         console.log('Autenticación exitosa y cookie establecida.');
                         res.json({
                             user: usuario.correo,
-                            tipo: usuario.tipo
+                            tipo: usuario.tipo,
                         });
                     });
                 }
