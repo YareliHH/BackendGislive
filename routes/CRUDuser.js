@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const connection = require('../Config/db');
-const bcrypt = require('bcryptjs'); // Importar bcrypt para comparar contraseñas
-const axios = require('axios'); // Para hacer la solicitud a Google reCAPTCHA
+const bcrypt = require('bcryptjs'); // Para comparar contraseñas
+const crypto = require('crypto'); // Para generar el token de sesión
+const axios = require('axios'); // Para reCAPTCHA
 
 const LOCK_TIME_MINUTES = 20; // Tiempo de bloqueo en minutos
 
@@ -11,9 +12,11 @@ router.post('/login', async (req, res) => {
 
     console.log('Datos recibidos del frontend:', { correo, password, captchaValue });
 
-    // Validar el reCAPTCHA antes de proceder con el login
+    // Validar reCAPTCHA antes de proceder con el login
     try {
-        const recaptchaResponse = await axios.post(`https://www.google.com/recaptcha/api/siteverify?secret=6LcKwWEqAAAAAN5jWmdv3NLpvl6wSeIRRnm9Omjq&response=${captchaValue}`);
+        const recaptchaResponse = await axios.post(
+            `https://www.google.com/recaptcha/api/siteverify?secret=6LcKwWEqAAAAAN5jWmdv3NLpvl6wSeIRRnm9Omjq&response=${captchaValue}`
+        );
         console.log('Respuesta de reCAPTCHA:', recaptchaResponse.data);
 
         if (!recaptchaResponse.data.success) {
@@ -41,9 +44,7 @@ router.post('/login', async (req, res) => {
         }
 
         const usuario = results[0];
-        console.log('Usuario encontrado:', usuario);
-
-        const currentTime = Date.now(); // Obtener la hora actual
+        const currentTime = Date.now(); // Hora actual en milisegundos
 
         // Verificar si el usuario está bloqueado
         const queryAttempts = 'SELECT * FROM login_attempts WHERE usuarios_id = ?';
@@ -53,8 +54,6 @@ router.post('/login', async (req, res) => {
                 return res.status(500).json({ error: 'Error en la base de datos' });
             }
 
-            console.log('Resultados de intentos de login:', attemptsResult);
-
             let lockUntil = null;
 
             if (attemptsResult.length > 0) {
@@ -62,15 +61,12 @@ router.post('/login', async (req, res) => {
                 lockUntil = attempt.fecha_bloqueo;
             }
 
-            // Verificar si el usuario está bloqueado
             if (lockUntil && currentTime < lockUntil) {
                 const remainingTime = Math.round((lockUntil - currentTime) / 60000); // Convertir ms a minutos
-                console.log(`Cuenta bloqueada. Inténtalo de nuevo en ${remainingTime} minutos.`);
                 return res.status(403).json({ error: `Cuenta bloqueada. Inténtalo de nuevo en ${remainingTime} minutos.` });
             }
 
-            // Si no está bloqueado, comparar la contraseña
-            console.log('Comparando contraseñas...');
+            // Comparar contraseñas
             bcrypt.compare(password, usuario.password, (err, isMatch) => {
                 if (err) {
                     console.error('Error al comparar contraseñas:', err);
@@ -78,9 +74,6 @@ router.post('/login', async (req, res) => {
                 }
 
                 if (!isMatch) {
-                    console.log('Contraseña incorrecta');
-
-                    // Incrementar el número de intentos fallidos
                     let loginAttempts = 1;
                     let newLockUntil = null;
 
@@ -88,13 +81,9 @@ router.post('/login', async (req, res) => {
                         loginAttempts = attemptsResult[0].intentos_fallidos + 1;
                     }
 
-                    console.log(`Intentos fallidos: ${loginAttempts}`);
-
-                    // Si los intentos fallidos alcanzan el máximo permitido, bloquear la cuenta
                     if (loginAttempts >= 5) {
                         newLockUntil = Date.now() + LOCK_TIME_MINUTES * 60 * 1000; // Bloqueo en milisegundos
-                        loginAttempts = 0; // Reiniciar intentos después del bloqueo
-                        console.log(`Cuenta bloqueada por ${LOCK_TIME_MINUTES} minutos.`);
+                        loginAttempts = 0;
                     }
 
                     const updateAttemptsQuery = `
@@ -115,20 +104,29 @@ router.post('/login', async (req, res) => {
                         return res.status(401).json({ error: 'Contraseña incorrecta' });
                     });
                 } else {
-                    console.log('Contraseña correcta, restableciendo intentos fallidos.');
+                    // Generar el token de sesión
+                    const sessionToken = crypto.randomBytes(64).toString('hex');
 
-                    // Restablecer intentos fallidos si la autenticación es exitosa
-                    const resetAttemptsQuery = 'DELETE FROM login_attempts WHERE usuarios_id = ?';
-                    connection.query(resetAttemptsQuery, [usuario.id], (err) => {
+                    // Guardar el token en la columna `cookie` de la base de datos
+                    const updateTokenQuery = 'UPDATE usuarios SET cookie = ? WHERE id = ?';
+                    connection.query(updateTokenQuery, [sessionToken, usuario.id], (err) => {
                         if (err) {
-                            console.error('Error al restablecer intentos de login:', err);
+                            console.error('Error al guardar el token en la base de datos:', err);
                             return res.status(500).json({ error: 'Error al procesar el inicio de sesión' });
                         }
 
-                        console.log('Autenticación exitosa');
+                        // Establecer cookie en la respuesta
+                        res.cookie('COOKIES', sessionToken, {
+                            httpOnly: true,
+                            secure: process.env.NODE_ENV === 'production', // Activar en producción
+                            sameSite: 'Lax',
+                            maxAge: 24 * 60 * 60 * 1000 // 1 día
+                        });
+
+                        console.log('Autenticación exitosa y cookie establecida.');
                         res.json({
-                            user: usuario.correo,  // Envía el correo del usuario autenticado
-                            tipo: usuario.tipo,     // Envía el tipo de usuario
+                            user: usuario.correo,
+                            tipo: usuario.tipo
                         });
                     });
                 }
