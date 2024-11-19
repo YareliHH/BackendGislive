@@ -6,12 +6,11 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const axios = require('axios');
 
-// Configurar CORS con soporte para cookies
 const corsOptions = {
-    origin: 'https://gisliveboutique.onrender.com', // Cambia esto por la URL de tu frontend
-    credentials: true, // Permitir envío de cookies
+    origin: 'https://gisliveboutique.onrender.com', // URL del frontend
+    credentials: true, // Permitir cookies
 };
-router.use(cors(corsOptions)); // Habilitar CORS en este router
+router.use(cors(corsOptions));
 
 const LOCK_TIME_MINUTES = 20; // Tiempo de bloqueo en minutos
 
@@ -119,12 +118,13 @@ router.post('/login', async (req, res) => {
                             return res.status(500).json({ error: 'Error al procesar el inicio de sesión' });
                         }
 
-                        res.cookie('COOKIES', sessionToken, {
+                        res.cookie('cookie', sessionToken, {
                             httpOnly: true,
-                            secure: false, // Cambiar a true en producción con HTTPS
-                            sameSite: 'None', // Configuración para frontend y backend en diferentes dominios
-                            maxAge: 24 * 60 * 60 * 1000,
+                            secure: process.env.NODE_ENV === 'production', // Activar true en producción
+                            sameSite: 'None', // Crucial para cookies entre dominios
+                            maxAge: 24 * 60 * 60 * 1000, // 1 día
                         });
+                        
 
                         console.log('Autenticación exitosa y cookie establecida.');
                         res.json({
