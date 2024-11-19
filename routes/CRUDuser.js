@@ -8,7 +8,7 @@ const axios = require('axios');
 
 // Configurar CORS con soporte para cookies
 const corsOptions = {
-    origin: 'http://localhost:3000', // Cambia esto por la URL de tu frontend
+    origin: 'https://gisliveboutique.onrender.com', // Cambia esto por la URL de tu frontend
     credentials: true, // Permitir envío de cookies
 };
 router.use(cors(corsOptions)); // Habilitar CORS en este router
