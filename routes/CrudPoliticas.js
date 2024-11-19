@@ -18,17 +18,27 @@ router.post('/insert', (req, res) => {
         // Si no hay versiones, comenzamos con la versión 1.0
         const maxVersion = result[0].maxVersion ? Math.floor(parseFloat(result[0].maxVersion)) + 1 : 1;
 
-        // Insertar la nueva política con la versión calculada
-        const insertQuery = 'INSERT INTO politicas_privacidad (titulo, contenido, estado, version) VALUES (?, ?, ?, ?)';
-        connection.query(insertQuery, [titulo, contenido, 'activo', maxVersion.toFixed(2)], (err, result) => {
+        // Desactivar todas las políticas existentes
+        const deactivateQuery = 'UPDATE politicas_privacidad SET estado = ? WHERE estado = ?';
+        connection.query(deactivateQuery, ['inactivo', 'activo'], (err) => {
             if (err) {
                 console.log(err);
-                return res.status(500).send('Error en el servidor al insertar nueva política');
+                return res.status(500).send('Error en el servidor al desactivar las políticas existentes');
             }
-            res.status(200).send(`Política de privacidad insertada con éxito, versión ${maxVersion.toFixed(2)}`);
+
+            // Insertar la nueva política con estado activo y la versión calculada
+            const insertQuery = 'INSERT INTO politicas_privacidad (titulo, contenido, estado, version) VALUES (?, ?, ?, ?)';
+            connection.query(insertQuery, [titulo, contenido, 'activo', maxVersion.toFixed(2)], (err) => {
+                if (err) {
+                    console.log(err);
+                    return res.status(500).send('Error en el servidor al insertar nueva política');
+                }
+                res.status(200).send(`Política de privacidad insertada con éxito, versión ${maxVersion.toFixed(2)}`);
+            });
         });
     });
 });
+
 
 // Ruta para actualizar una política de privacidad
 router.put('/update/:id', (req, res) => {
@@ -102,7 +112,7 @@ router.put('/deactivate/:id', (req, res) => {
 
 // Ruta para obtener todas las políticas de privacidad activas
 router.get('/getpolitica', (req, res) => {
-    const query = 'SELECT * FROM politicas_privacidad WHERE estado = "activo" ORDER BY id';
+    const query = 'SELECT * FROM politicas_privacidad';
 
     connection.query(query, (err, results) => {
         if (err) {
