@@ -120,12 +120,11 @@ router.post('/login', async (req, res) => {
 
                         res.cookie('cookie', sessionToken, {
                             httpOnly: true,
-                            secure: process.env.NODE_ENV === 'production', // Activar true en producción
+                            secure: process.env.NODE_ENV === 'production', // Asegúrate de que esté en true en producción
                             sameSite: 'None', // Crucial para cookies entre dominios
                             maxAge: 24 * 60 * 60 * 1000, // 1 día
                         });
                         
-
                         console.log('Autenticación exitosa y cookie establecida.');
                         res.json({
                             user: usuario.correo,
