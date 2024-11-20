@@ -134,12 +134,16 @@ router.get('/getdeslinde', (req, res) => {
 
     connection.query(query, (err, results) => {
         if (err) {
-            console.log('Error al ejecutar la consulta:', err);
-            return res.status(500).send('Error en el servidor al obtener los registros');
+            console.error('Error al ejecutar la consulta:', err); // Detalles del error
+            return res.status(500).json({
+                message: 'Error al obtener los deslindes',
+                error: err.message // Enviar el mensaje de error al frontend
+            });
         }
         res.status(200).json(results);
     });
 });
+
 
 
 module.exports = router;
