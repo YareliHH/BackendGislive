@@ -7,20 +7,20 @@ const connection = require('../Config/db');
 router.post('/deslinde', (req, res) => {
     const { titulo, contenido } = req.body;
 
-    // Primero actualizamos el estado a 'inactivo' para todos los registros
-    const updateQuery = 'UPDATE tbldeslinde_legal SET estado = ?';
-    const values = ['inactivo'];
+    // Query para desactivar todos los registros actuales
+    const deactivateQuery = 'UPDATE tbldeslinde_legal SET estado = "inactivo"';
 
-    connection.query(updateQuery, values, (err, result) => {
+    connection.query(deactivateQuery, (err, result) => {
         if (err) {
-            console.log('Error al actualizar el estado:', err);
-            return res.status(500).send('Error al actualizar el estado');
+            console.log('Error al desactivar los registros:', err);
+            return res.status(500).send('Error en el servidor al actualizar los estados a inactivo');
         }
 
-        console.log(`Filas afectadas al actualizar estado: ${result.affectedRows}`);
+        console.log(`Filas afectadas: ${result.affectedRows}`); // Verifica cuántas filas fueron actualizadas.
 
-        // Obtener la versión máxima actual
+        // Query para obtener la versión máxima actual
         const selectQuery = 'SELECT MAX(CAST(version AS DECIMAL(5,2))) AS maxVersion FROM tbldeslinde_legal';
+
         connection.query(selectQuery, (err, result) => {
             if (err) {
                 console.log('Error al obtener la versión máxima:', err);
@@ -34,15 +34,13 @@ router.post('/deslinde', (req, res) => {
             connection.query(insertQuery, [titulo, contenido, 'activo', maxVersion.toFixed(2)], (err) => {
                 if (err) {
                     console.log('Error al insertar el deslinde:', err);
-                    return res.status(500).send('Error al insertar el deslinde');
+                    return res.status(500).send('Error en el servidor al insertar nueva política');
                 }
-
                 res.status(200).send(`Deslinde legal insertado con éxito, versión ${maxVersion.toFixed(2)}`);
             });
         });
     });
 });
-
 
 
 
