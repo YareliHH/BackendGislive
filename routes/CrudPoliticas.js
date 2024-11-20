@@ -4,7 +4,6 @@ const router = express.Router();
 
 // Ruta para insertar una nueva política de privacidad
 router.post('/politica', (req, res) => {
-    const { titulo, contenido } = req.body;
 
     // Query para desactivar todos los registros actuales
     const deactivateQuery = 'UPDATE politicas_privacidad SET estado = "inactivo"';

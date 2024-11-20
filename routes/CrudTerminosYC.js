@@ -4,7 +4,9 @@ const connection = require('../Config/db');
 
 
 router.post('/terminos', (req, res) => {
-    const { titulo, contenido } = req.body;
+  
+       // Query para desactivar todos los registros actuales
+       const deactivateQuery = 'UPDATE terminos_condiciones SET estado = "inactivo"';
 
     connection.query(deactivateQuery, (err, result) => {
         if (err) {

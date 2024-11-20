@@ -5,7 +5,6 @@ const connection = require('../Config/db');
 
 // Ruta para insertar un nuevo deslinde legal
 router.post('/deslinde', (req, res) => {
-    const { titulo, contenido } = req.body;
 
     // Query para desactivar todos los registros actuales
     const deactivateQuery = 'UPDATE tbldeslinde_legal SET estado = "inactivo"';
