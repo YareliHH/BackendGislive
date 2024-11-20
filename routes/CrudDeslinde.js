@@ -7,28 +7,40 @@ const connection = require('../Config/db');
 router.post('/deslinde', (req, res) => {
     const { titulo, contenido } = req.body;
 
-    const selectQuery = 'SELECT MAX(CAST(version AS DECIMAL(5,2))) AS maxVersion FROM tbldeslinde_legal ';
+    // Query para desactivar todos los registros actuales
+    const deactivateQuery = 'UPDATE tbldeslinde_legal SET estado = "inactivo"';
 
-    connection.query(selectQuery, (err, result) => {
+    connection.query(deactivateQuery, (err) => {
         if (err) {
             console.log(err);
-            return res.status(500).send('Error en el servidor al obtener la versión actual');
+            return res.status(500).send('Error en el servidor al actualizar los estados a inactivo');
         }
 
-        // Si no hay versiones, comenzamos con la versión 1.0
-        const maxVersion = result[0].maxVersion ? Math.floor(parseFloat(result[0].maxVersion)) + 1 : 1;
+        // Query para obtener la versión máxima actual
+        const selectQuery = 'SELECT MAX(CAST(version AS DECIMAL(5,2))) AS maxVersion FROM tbldeslinde_legal';
 
-        // Insertar la nueva deslinde con la versión calculada
-        const insertQuery = 'INSERT INTO tbldeslinde_legal (titulo, contenido, estado, version) VALUES (?, ?, ?, ?)';
-        connection.query(insertQuery, [titulo, contenido, 'activo', maxVersion.toFixed(2)], (err, result) => {
+        connection.query(selectQuery, (err, result) => {
             if (err) {
                 console.log(err);
-                return res.status(500).send('Error en el servidor al insertar nueva política');
+                return res.status(500).send('Error en el servidor al obtener la versión actual');
             }
-            res.status(200).send(`deslinde legal insertada con éxito, versión ${maxVersion.toFixed(2)}`);
+
+            // Si no hay versiones, comenzamos con la versión 1.0
+            const maxVersion = result[0].maxVersion ? Math.floor(parseFloat(result[0].maxVersion)) + 1 : 1;
+
+            // Insertar el nuevo deslinde con la versión calculada
+            const insertQuery = 'INSERT INTO tbldeslinde_legal (titulo, contenido, estado, version) VALUES (?, ?, ?, ?)';
+            connection.query(insertQuery, [titulo, contenido, 'activo', maxVersion.toFixed(2)], (err) => {
+                if (err) {
+                    console.log(err);
+                    return res.status(500).send('Error en el servidor al insertar nueva política');
+                }
+                res.status(200).send(`Deslinde legal insertado con éxito, versión ${maxVersion.toFixed(2)}`);
+            });
         });
-    });  
+    });
 });
+
 
 // Ruta para actualizar un deslinde
 router.put('/update/:id', (req, res) => {
