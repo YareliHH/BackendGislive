@@ -130,15 +130,16 @@ router.get('/getdeslindeactivo', (req, res) => {
 
 // Ruta para obtener todas las políticas (activas e inactivas)
 router.get('/getdeslinde', (req, res) => {
-    const query = 'SELECT * FROM  tbldeslinde_legal ORDER BY numero_politica, CAST(version AS DECIMAL(5,2)) ASC';
+    const query = 'SELECT * FROM tbldeslinde_legal ORDER BY numero_politica, CAST(version AS DECIMAL(5,2)) ASC';
 
     connection.query(query, (err, results) => {
         if (err) {
-            console.log(err);
-            return res.status(500).send('Error en el servidor');
+            console.log('Error al ejecutar la consulta:', err);
+            return res.status(500).send('Error en el servidor al obtener los registros');
         }
         res.status(200).json(results);
     });
 });
+
 
 module.exports = router;
