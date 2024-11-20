@@ -130,7 +130,7 @@ router.get('/getdeslindeactivo', (req, res) => {
 
 // Ruta para obtener todas las políticas (activas e inactivas)
 router.get('/getdeslinde', (req, res) => {
-    const query = 'SELECT * FROM tbldeslinde_legal ORDER BY numero_politica, CAST(version AS DECIMAL(5,2)) ASC';
+    const query = 'SELECT * FROM tbldeslinde_legal ORDER BY version, CAST(version AS DECIMAL(5,2)) ASC';
 
     connection.query(query, (err, results) => {
         if (err) {
