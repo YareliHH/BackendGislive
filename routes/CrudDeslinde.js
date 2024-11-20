@@ -7,8 +7,17 @@ const connection = require('../Config/db');
 router.post('/deslinde', (req, res) => {
     const { titulo, contenido } = req.body;
 
-    // Query para desactivar todos los registros actuales
-    const deactivateQuery = 'UPDATE tbldeslinde_legal SET estado = "inactivo"';
+    const updateQuery = 'UPDATE tbldeslinde_legal SET estado = ?';
+    const values = ['inactivo'];
+
+    connection.query(updateQuery, values, (err, result) => {
+        if (err) {
+            console.log(err);
+            return res.status(500).send('Error al actualizar el estado');
+        }
+        res.status(200).send('Estado actualizado a inactivo para todos los registros');
+    });
+
 
     connection.query(deactivateQuery, (err, result) => {
         if (err) {
