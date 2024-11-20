@@ -3,37 +3,39 @@ const connection = require('../Config/db'); // Asegúrate de que la ruta a tu co
 const router = express.Router();
 
 // Ruta para insertar una nueva política de privacidad
-router.post('/insert', (req, res) => {
+router.post('/politica', (req, res) => {
     const { titulo, contenido } = req.body;
 
-    // Verificar la versión más alta actual para asignar una nueva versión
-    const selectQuery = 'SELECT MAX(CAST(version AS DECIMAL(5,2))) AS maxVersion FROM politicas_privacidad';
+    // Query para desactivar todos los registros actuales
+    const deactivateQuery = 'UPDATE politicas_privacidad SET estado = "inactivo"';
 
-    connection.query(selectQuery, (err, result) => {
+    connection.query(deactivateQuery, (err, result) => {
         if (err) {
-            console.log(err);
-            return res.status(500).send('Error en el servidor al obtener la versión actual');
+            console.log('Error al desactivar los registros:', err);
+            return res.status(500).send('Error en el servidor al actualizar los estados a inactivo');
         }
 
-        // Si no hay versiones, comenzamos con la versión 1.0
-        const maxVersion = result[0].maxVersion ? Math.floor(parseFloat(result[0].maxVersion)) + 1 : 1;
+        console.log(`Filas afectadas: ${result.affectedRows}`); // Verifica cuántas filas fueron actualizadas.
 
-        // Desactivar todas las políticas existentes
-        const deactivateQuery = 'UPDATE politicas_privacidad SET estado = ? WHERE estado = ?';
-        connection.query(deactivateQuery, ['inactivo', 'activo'], (err) => {
+        // Query para obtener la versión máxima actual
+        const selectQuery = 'SELECT MAX(CAST(version AS DECIMAL(5,2))) AS maxVersion FROM politicas_privacidad';
+
+        connection.query(selectQuery, (err, result) => {
             if (err) {
-                console.log(err);
-                return res.status(500).send('Error en el servidor al desactivar las políticas existentes');
+                console.log('Error al obtener la versión máxima:', err);
+                return res.status(500).send('Error en el servidor al obtener la versión actual');
             }
 
-            // Insertar la nueva política con estado activo y la versión calculada
+            const maxVersion = result[0].maxVersion ? Math.floor(parseFloat(result[0].maxVersion)) + 1 : 1;
+
+            // Insertar el nuevo deslinde con la versión calculada
             const insertQuery = 'INSERT INTO politicas_privacidad (titulo, contenido, estado, version) VALUES (?, ?, ?, ?)';
             connection.query(insertQuery, [titulo, contenido, 'activo', maxVersion.toFixed(2)], (err) => {
                 if (err) {
-                    console.log(err);
+                    console.log('Error al insertar el deslinde:', err);
                     return res.status(500).send('Error en el servidor al insertar nueva política');
                 }
-                res.status(200).send(`Política de privacidad insertada con éxito, versión ${maxVersion.toFixed(2)}`);
+                res.status(200).send(`Deslinde legal insertado con éxito, versión ${maxVersion.toFixed(2)}`);
             });
         });
     });
@@ -110,9 +112,9 @@ router.put('/deactivate/:id', (req, res) => {
     });
 });
 
-// Ruta para obtener todas las políticas de privacidad activas
-router.get('/getpolitica', (req, res) => {
-    const query = 'SELECT * FROM politicas_privacidad';
+// Ruta para obtener todas las políticas de privacidad activass
+router.get('/getpoliticaactivo', (req, res) => {
+    const query = 'SELECT * FROM  politicas_privacidad WHERE estado = "activo" ORDER BY id';
 
     connection.query(query, (err, results) => {
         if (err) {
@@ -124,14 +126,18 @@ router.get('/getpolitica', (req, res) => {
 });
 
 
+
 // Ruta para obtener todas las políticas (activas e inactivas)
-router.get('/getAllPoliticas', (req, res) => {
-    const query = 'SELECT * FROM politicas_privacidad ORDER BY numero_politica, CAST(version AS DECIMAL(5,2)) ASC';
+router.get('/getdeslinde', (req, res) => {
+    const query = 'SELECT * FROM politicas_privacidad ORDER BY version, CAST(version AS DECIMAL(5,2)) ASC';
 
     connection.query(query, (err, results) => {
         if (err) {
-            console.log(err);
-            return res.status(500).send('Error en el servidor');
+            console.error('Error al ejecutar la consulta:', err); // Detalles del error
+            return res.status(500).json({
+                message: 'Error al obtener los politicas',
+                error: err.message // Enviar el mensaje de error al frontend
+            });
         }
         res.status(200).json(results);
     });

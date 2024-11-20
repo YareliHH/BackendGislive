@@ -42,8 +42,6 @@ router.post('/deslinde', (req, res) => {
     });
 });
 
-
-
 // Ruta para actualizar un deslinde
 router.put('/update/:id', (req, res) => {
     const { titulo, contenido } = req.body;

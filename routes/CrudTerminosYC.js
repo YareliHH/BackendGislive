@@ -6,27 +6,40 @@ const connection = require('../Config/db');
 router.post('/terminos', (req, res) => {
     const { titulo, contenido } = req.body;
 
-    const selectQuery = 'SELECT MAX(CAST(version AS DECIMAL(5,2))) AS maxVersion FROM terminos_condiciones';
-    connection.query(selectQuery, (err, result) => {
+    connection.query(deactivateQuery, (err, result) => {
         if (err) {
-            console.log(err);
-            return res.status(500).send('Error en el servidor al obtener la versión actual');
+            console.log('Error al desactivar los registros:', err);
+            return res.status(500).send('Error en el servidor al actualizar los estados a inactivo');
         }
 
-// Si no hay versiones, comenzamos con la versión 1.0
-        const maxVersion = result[0].maxVersion ? Math.floor(parseFloat(result[0].maxVersion)) + 1 : 1;
+        console.log(`Filas afectadas: ${result.affectedRows}`); // Verifica cuántas filas fueron actualizadas.
 
-        // Insertar la nueva política con la versión calculada
-        const insertQuery = 'INSERT INTO terminos_condiciones (titulo, contenido, estado, version) VALUES (?, ?, ?, ?)';
-        connection.query(insertQuery, [titulo, contenido, 'activo', maxVersion.toFixed(2)], (err, result) => {
-            if (err) {
-                console.log(err);
-                return res.status(500).send('Error en el servidor al insertar nueva política');
-            }
-            res.status(200).send(`terminos y condiciones insertada con éxito, versión ${maxVersion.toFixed(2)}`);
-        });
-    });
-});
+          // Query para obtener la versión máxima actual
+          const selectQuery = 'SELECT MAX(CAST(version AS DECIMAL(5,2))) AS maxVersion FROM terminos_condiciones';
+
+          connection.query(selectQuery, (err, result) => {
+              if (err) {
+                  console.log('Error al obtener la versión máxima:', err);
+                  return res.status(500).send('Error en el servidor al obtener la versión actual');
+              }
+
+              const maxVersion = result[0].maxVersion ? Math.floor(parseFloat(result[0].maxVersion)) + 1 : 1;
+
+              // Insertar el nuevo deslinde con la versión calculada
+              const insertQuery = 'INSERT INTO terminos_condiciones (titulo, contenido, estado, version) VALUES (?, ?, ?, ?)';
+              connection.query(insertQuery, [titulo, contenido, 'activo', maxVersion.toFixed(2)], (err) => {
+                  if (err) {
+                      console.log('Error al insertar el termino:', err);
+                      return res.status(500).send('Error en el servidor al insertar un nuevo termino');
+                  }
+                  res.status(200).send(`Termino insertado con éxito, versión ${maxVersion.toFixed(2)}`);
+              });
+          });
+      });
+  });
+    
+
+
 
 // Actualizar un término
 router.put('/update/:id', (req, res) => {
@@ -73,7 +86,7 @@ connection.query(deactivateQuery, [id], (err, result) => {
     connection.query(insertQuery, [titulo, contenido, 'activo', newVersion], (err, result) => {
         if (err) {
             console.log(err);
-            return res.status(500).send('Error al insertar la nueva versión de la política');
+            return res.status(500).send('Error al insertar la nueva versión del termino');
         }
         res.status(200).send(`termino actualizada a la versión ${newVersion}`);
     });
@@ -97,31 +110,35 @@ res.status(200).send('Terminos y condiciones eliminada (lógicamente) con éxito
 });
 });
 
-// Ruta para obtener todas las políticas de privacidad activas
-router.get('/getterminos', (req, res) => {
-const query = 'SELECT * FROM terminos_condiciones WHERE estado = "activo" ORDER BY id';
+// Ruta para obtener todas las políticas de privacidad activass
+router.get('/getterminosactivo', (req, res) => {
+    const query = 'SELECT * FROM  terminos_condiciones WHERE estado = "activo" ORDER BY id';
 
-connection.query(query, (err, results) => {
-if (err) {
-    console.log(err);
-    return res.status(500).send('Error en el servidor');
-}
-res.status(200).json(results);
-});
+    connection.query(query, (err, results) => {
+        if (err) {
+            console.log(err);
+            return res.status(500).send('Error en el servidor');
+        }
+        res.status(200).json(results);
+    });
 });
 
 
 // Ruta para obtener todas las políticas (activas e inactivas)
 router.get('/getterminos', (req, res) => {
-const query = 'SELECT * FROM terminos_condiciones ORDER BY numero_politica, CAST(version AS DECIMAL(5,2)) ASC';
+    const query = 'SELECT * FROM terminos_condiciones ORDER BY version, CAST(version AS DECIMAL(5,2)) ASC';
 
-connection.query(query, (err, results) => {
-if (err) {
-    console.log(err);
-    return res.status(500).send('Error en el servidor');
-}
-res.status(200).json(results);
+    connection.query(query, (err, results) => {
+        if (err) {
+            console.error('Error al ejecutar la consulta:', err); // Detalles del error
+            return res.status(500).json({
+                message: 'Error al obtener los terminos',
+                error: err.message // Enviar el mensaje de error al frontend
+            });
+        }
+        res.status(200).json(results);
+    });
 });
-});
+
 
 module.exports = router;
