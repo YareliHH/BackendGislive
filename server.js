@@ -1,6 +1,9 @@
 // server.js
 
 const express = require('express');
+//const https = require('https');//nuevo
+//const fs = require('fs');//nuevo
+
 const bodyParser = require('body-parser');
 const cors = require('cors'); 
 const Registrer = require('./routes/CRUDregistre.js'); 
@@ -12,6 +15,11 @@ const perfil_empresa = require('./routes/PerfiEmpresa.js');
 const redesSociales = require('./routes/RedesSociales.js');
 
 const app = express();
+
+//const privateKey = fs.readFileSync('C:/xampp/apache/conf/ssl.key/server.key','utf8');
+//const certi = fs.readFileSync('C:/xampp/apache/conf/ssl.crt/server.crt','utf8');
+//const credencials={key:privateKey, cert: certi};
+
 
 // Configuración de CORS para permitir solicitudes desde dominios específicos
 app.use(cors({
@@ -39,10 +47,18 @@ app.use('/api', deslinde);
 app.use('/api', perfil_empresa);
 app.use('/api', redesSociales);
 
-// Iniciar el servidor en el puerto especificado o en el puerto 3001 por defecto
+// Iniciar el servidor por https
 const PORT = process.env.PORT || 3001;
+
+//////////ANTES
 app.listen(PORT, () => {
     console.log(`Servidor ejecutándose en el puerto ${PORT}`);
-});
+    });
+
+//nuevo
+//https.createServer(credencials, app).listen(PORT, () => {
+  //  console.log(`Servidor conectado a https en el puerto ${PORT}`);
+  //});
+  
 
 module.exports = app; // Exporta `app` si necesitas realizar pruebas
