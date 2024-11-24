@@ -34,7 +34,7 @@ router.post('/politica', (req, res) => {
                     console.log('Error al insertar el deslinde:', err);
                     return res.status(500).send('Error en el servidor al insertar nueva política');
                 }
-                res.status(200).send(`Deslinde legal insertado con éxito, versión ${maxVersion.toFixed(2)}`);
+                res.status(200).send(`politica insertado con éxito, versión ${maxVersion.toFixed(2)}`);
             });
         });
     });
@@ -127,7 +127,7 @@ router.get('/getpoliticaactivo', (req, res) => {
 
 
 // Ruta para obtener todas las políticas (activas e inactivas)
-router.get('/getdeslinde', (req, res) => {
+router.get('/getpolitica', (req, res) => {
     const query = 'SELECT * FROM politicas_privacidad ORDER BY version, CAST(version AS DECIMAL(5,2)) ASC';
 
     connection.query(query, (err, results) => {
