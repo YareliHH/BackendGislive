@@ -57,6 +57,8 @@ router.get('/logs', async (req, res) => {
 });
 
 // Endpoint para obtener actividades
+
+
 router.get('/reportes/actividades', (req, res) => {
   const query = `
       SELECT ra.id, ra.actividad, ra.fecha, u.nombre AS usuario
@@ -64,13 +66,21 @@ router.get('/reportes/actividades', (req, res) => {
       JOIN usuarios u ON ra.usuarios_id = u.id
       ORDER BY ra.fecha DESC
   `;
+
   connection.query(query, (err, results) => {
-      if (err) {
-          console.error('Error al obtener actividades:', err);
-          return res.status(500).json({ message: 'Error al obtener actividades.' });
-      }
-      res.status(200).json(results);
-   });
+    if (err) {
+      console.error('Error al obtener actividades:', err.message);
+      return res.status(500).json({ message: 'Error interno del servidor.' });
+    }
+
+    if (results.length === 0) {
+      console.warn('La consulta no devolvió resultados.');
+      return res.status(404).json({ message: 'No se encontraron actividades.' });
+    }
+
+    console.log('Resultados de la consulta:', results);
+    res.status(200).json(results);
+  });
 });
 
 router.get('/usuarios/:id', (req, res) => {
