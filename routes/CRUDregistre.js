@@ -289,17 +289,6 @@ router.post('/resetPassword', async (req, res) => {
                 }
                 res.status(200).json({ message: 'Contraseña actualizada correctamente.' });
             });
-            // Registro de la actividad de inicio de sesión
-            const registroActividadQuery = `
-            INSERT INTO registro_actividades (usuarios_id, actividad, fecha)
-            VALUES (?, 'Cambio de contraseña', NOW())
-        `;
-        connection.query(registroActividadQuery, [usuario.id], (err) => {
-            if (err) {
-                console.error('Error al registrar la actividad:', err);
-                // No bloqueamos el login, solo informamos en el log
-            }
-        });
         });
     } catch (error) {
         console.error('Error en el proceso de restablecimiento de contraseña:', error);
