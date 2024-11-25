@@ -45,7 +45,7 @@ router.post('/politica', (req, res) => {
 
 
 // Ruta para actualizar una política de privacidad
-router.put('/update/:id', (req, res) => {
+router.put('/updatepolitica/:id', (req, res) => {
     const { titulo, contenido } = req.body;
     const { id } = req.params;
 
