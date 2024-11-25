@@ -29,7 +29,10 @@ router.post('/politica', (req, res) => {
 
             // Insertar el nuevo deslinde con la versión calculada
             const insertQuery = 'INSERT INTO politicas_privacidad (titulo, contenido, estado, version) VALUES (?, ?, ?, ?)';
+            const { titulo, contenido } = req.body;
+
             connection.query(insertQuery, [titulo, contenido, 'activo', maxVersion.toFixed(2)], (err) => {
+            
                 if (err) {
                     console.log('Error al insertar el deslinde:', err);
                     return res.status(500).send('Error en el servidor al insertar nueva política');
