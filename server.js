@@ -13,6 +13,7 @@ const politicas = require('./routes/CrudPoliticas.js');
 const deslinde = require('./routes/CrudDeslinde.js');
 const perfil_empresa = require('./routes/PerfiEmpresa.js');
 const redesSociales = require('./routes/RedesSociales.js');
+const reportes = require('./routes/Reportes.js');
 
 const app = express();
 
@@ -46,6 +47,7 @@ app.use('/api', politicas);
 app.use('/api', deslinde); 
 app.use('/api', perfil_empresa);
 app.use('/api', redesSociales);
+app.use('/api', reportes);
 
 // Iniciar el servidor por https
 const PORT = process.env.PORT || 3001;
