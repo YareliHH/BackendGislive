@@ -48,7 +48,7 @@ router.get('/login-attempts', async (req, res) => {
 // Endpoint para obtener logs
 router.get('/logs', async (req, res) => {
     const query = 'SELECT * FROM logs';
-    db.query(query, (err, results) => {
+    connection.query(query, (err, results) => {
         if (err) {
             return res.status(500).json({ error: 'Error al obtener logs' });
         }
