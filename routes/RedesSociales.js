@@ -8,7 +8,7 @@ function validateUrl(url) {
 }
 
 // Endpoint para obtener todas las redes sociales
-router.get('/get', (req, res) => {
+router.get('/obtenerredes', (req, res) => {
     const query = `SELECT * FROM redes_sociales ORDER BY fecha_creacion DESC`;
     db.query(query, (err, results) => {
         if (err) {
