@@ -29,6 +29,7 @@ router.post('/terminos', (req, res) => {
 
               // Insertar el nuevo deslinde con la versión calculada
               const insertQuery = 'INSERT INTO terminos_condiciones (titulo, contenido, estado, version) VALUES (?, ?, ?, ?)';
+              const { titulo, contenido } = req.body;
               connection.query(insertQuery, [titulo, contenido, 'activo', maxVersion.toFixed(2)], (err) => {
                   if (err) {
                       console.log('Error al insertar el termino:', err);
@@ -44,7 +45,7 @@ router.post('/terminos', (req, res) => {
 
 
 // Actualizar un término
-router.put('/update/:id', (req, res) => {
+router.put('/updatetermino/:id', (req, res) => {
     const { titulo, contenido } = req.body;
     const { id } = req.params;
 
@@ -85,6 +86,7 @@ connection.query(deactivateQuery, [id], (err, result) => {
 
     // Insertar la nueva política con la versión incrementada (decimal)
     const insertQuery = 'INSERT INTO terminos_condiciones (titulo, contenido, estado, version) VALUES (?, ?, ?, ?)';
+    const { titulo, contenido } = req.body;
     connection.query(insertQuery, [titulo, contenido, 'activo', newVersion], (err, result) => {
         if (err) {
             console.log(err);

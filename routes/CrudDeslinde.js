@@ -30,6 +30,7 @@ router.post('/deslinde', (req, res) => {
 
             // Insertar el nuevo deslinde con la versión calculada
             const insertQuery = 'INSERT INTO tbldeslinde_legal (titulo, contenido, estado, version) VALUES (?, ?, ?, ?)';
+            const { titulo, contenido } = req.body;
             connection.query(insertQuery, [titulo, contenido, 'activo', maxVersion.toFixed(2)], (err) => {
                 if (err) {
                     console.log('Error al insertar el deslinde:', err);
@@ -42,7 +43,7 @@ router.post('/deslinde', (req, res) => {
 });
 
 // Ruta para actualizar un deslinde
-router.put('/update/:id', (req, res) => {
+router.put('/updatedeslinde/:id', (req, res) => {
     const { titulo, contenido } = req.body;
     const { id } = req.params;
 
@@ -84,6 +85,7 @@ router.put('/update/:id', (req, res) => {
 
             // Insertar la nueva política con la versión incrementada (decimal)
             const insertQuery = 'INSERT INTO  tbldeslinde_legal (titulo, contenido, estado, version) VALUES (?, ?, ?, ?)';
+            const { titulo, contenido } = req.body;
             connection.query(insertQuery, [titulo, contenido, 'activo', newVersion], (err, result) => {
                 if (err) {
                     console.log(err);
