@@ -64,7 +64,7 @@ router.get('/reportes/actividades', (req, res) => {
       JOIN usuarios u ON ra.usuarios_id = u.id
       ORDER BY ra.fecha DESC
   `;
-  db.query(query, (err, results) => {
+  connection.query(query, (err, results) => {
       if (err) {
           console.error('Error al obtener actividades:', err);
           return res.status(500).json({ message: 'Error al obtener actividades.' });
