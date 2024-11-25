@@ -287,7 +287,6 @@ router.post('/resetPassword', async (req, res) => {
                     console.error('Error al actualizar la contraseña:', updateErr);
                     return res.status(500).json({ message: 'Error al actualizar la contraseña.' });
                 }
-
                 // Registrar la actividad de cambio de contraseña
                 const registroActividadQuery = `
                     INSERT INTO registro_actividades (usuarios_id, actividad, fecha)

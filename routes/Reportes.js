@@ -56,6 +56,23 @@ router.get('/logs', async (req, res) => {
     });
 });
 
+// Endpoint para obtener actividades
+router.get('/reportes/actividades', (req, res) => {
+  const query = `
+      SELECT ra.id, ra.actividad, ra.fecha, u.nombre AS usuario
+      FROM registro_actividades ra
+      JOIN usuarios u ON ra.usuarios_id = u.id
+      ORDER BY ra.fecha DESC
+  `;
+  db.query(query, (err, results) => {
+      if (err) {
+          console.error('Error al obtener actividades:', err);
+          return res.status(500).json({ message: 'Error al obtener actividades.' });
+      }
+      res.status(200).json(results);
+   });
+});
+
 router.get('/usuarios/:id', (req, res) => {
     const usuarios_id = req.params.id;
 
