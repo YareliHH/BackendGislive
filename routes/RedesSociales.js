@@ -4,8 +4,10 @@ const router = express.Router();
 
 
 function validateUrl(url) {
-    return url.length > 0; 
+    const regex = /^(https?:\/\/)?([a-z0-9-]+\.)+[a-z]{2,6}(\/[a-zA-Z0-9-]*)*\/?$/;
+    return regex.test(url);
 }
+
 
 // Endpoint para obtener todas las redes sociales
 router.get('/obtenerredes', (req, res) => {
