@@ -118,6 +118,18 @@ router.post('/login', async (req, res) => {
                             return res.status(500).json({ error: 'Error al procesar el inicio de sesión' });
                         }
 
+                        ///////////
+                        // Registro de la actividad de inicio de sesión
+                            const registroActividadQuery = `
+                            INSERT INTO registro_actividades (usuarios_id, actividad, fecha)
+                            VALUES (?, 'Inicio de sesión', NOW())
+                        `;
+                        connection.query(registroActividadQuery, [usuario.id], (err) => {
+                            if (err) {
+                                console.error('Error al registrar la actividad:', err);
+                                // No bloqueamos el login, solo informamos en el log
+                            }
+                        });
                         res.cookie('cookie', sessionToken, {
                             httpOnly: true,
                             secure: process.env.NODE_ENV === 'production', // Asegúrate de que esté en true en producción
