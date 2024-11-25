@@ -87,6 +87,8 @@ router.put('/update/:id', (req, res) => {
 
             // Insertar la nueva política con la versión incrementada (decimal)
             const insertQuery = 'INSERT INTO politicas_privacidad (titulo, contenido, estado, version) VALUES (?, ?, ?, ?)';
+            const { titulo, contenido } = req.body;
+            
             connection.query(insertQuery, [titulo, contenido, 'activo', newVersion], (err, result) => {
                 if (err) {
                     console.log(err);
