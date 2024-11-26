@@ -143,7 +143,7 @@ router.get('/getdeslinde', (req, res) => {
 
 // Ruta para obtener deslinde legal activo
 router.get('/deslinde/deslinde', (req, res) => {
-    const query = 'SELECT * FROM tbl_deslinde_legal WHERE estado = "activo"';
+    const query = 'SELECT * FROM tbldeslinde_legal WHERE estado = "activo"';
     connection.query(query, (err, results) => {
       if (err) {
         console.error('Error al obtener deslinde legal:', err);
