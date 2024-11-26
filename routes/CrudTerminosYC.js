@@ -142,12 +142,12 @@ router.get('/getterminos', (req, res) => {
 // --- Endpoint para `terminos_condiciones` ---
 router.get('/termiCondicion/terminos_condiciones', (req, res) => {
     const query = 'SELECT * FROM terminos_condiciones WHERE estado = "activo"';
-    db.query(query, (err, results) => {
-        if (err) {
-            console.error('Error al obtener términos y condiciones:', err);
-            return res.status(500).json({ message: 'Error al obtener términos y condiciones.' });
-        }
-        res.status(200).json(results);
+    connection.query(query, (err, results) => {
+      if (err) {
+        console.error('Error al obtener términos y condiciones:', err);
+        return res.status(500).json({ message: 'Error al obtener términos y condiciones.' });
+      }
+      res.status(200).json(results);
     });
-});
+  });
 module.exports = router;

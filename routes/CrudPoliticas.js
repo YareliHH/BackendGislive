@@ -145,15 +145,16 @@ router.get('/getpolitica', (req, res) => {
     });
 });
 
-// --- Endpoint para `politicas_privacidad` ---
+// Ruta para obtener políticas de privacidad activas
 router.get('/politicas/politicas_privacidad', (req, res) => {
     const query = 'SELECT * FROM politicas_privacidad WHERE estado = "activo"';
-    db.query(query, (err, results) => {
-        if (err) {
-            console.error('Error al obtener políticas de privacidad:', err);
-            return res.status(500).json({ message: 'Error al obtener políticas de privacidad.' });
-        }
-        res.status(200).json(results);
+    connection.query(query, (err, results) => {
+      if (err) {
+        console.error('Error al obtener políticas de privacidad:', err);
+        return res.status(500).json({ message: 'Error al obtener políticas de privacidad.' });
+      }
+      res.status(200).json(results);
     });
-});
+  });
+  
 module.exports = router;
