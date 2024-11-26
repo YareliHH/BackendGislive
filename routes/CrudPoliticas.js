@@ -4,7 +4,7 @@ const router = express.Router();
 
 // Ruta para insertar una nueva política de privacidad
 router.post('/politica', (req, res) => {
-    
+
     // Query para desactivar todos los registros actuales
     const deactivateQuery = 'UPDATE politicas_privacidad SET estado = "inactivo"';
 
@@ -32,7 +32,7 @@ router.post('/politica', (req, res) => {
             const { titulo, contenido } = req.body;
 
             connection.query(insertQuery, [titulo, contenido, 'activo', maxVersion.toFixed(2)], (err) => {
-            
+
                 if (err) {
                     console.log('Error al insertar el deslinde:', err);
                     return res.status(500).send('Error en el servidor al insertar nueva política');
@@ -129,8 +129,6 @@ router.get('/getpoliticaactivo', (req, res) => {
     });
 });
 
-
-
 // Ruta para obtener todas las políticas (activas e inactivas)
 router.get('/getpolitica', (req, res) => {
     const query = 'SELECT * FROM politicas_privacidad ORDER BY version, CAST(version AS DECIMAL(5,2)) ASC';
@@ -147,4 +145,15 @@ router.get('/getpolitica', (req, res) => {
     });
 });
 
+// --- Endpoint para `politicas_privacidad` ---
+router.get('/politicas/politicas_privacidad', (req, res) => {
+    const query = 'SELECT * FROM politicas_privacidad WHERE estado = "activo"';
+    db.query(query, (err, results) => {
+        if (err) {
+            console.error('Error al obtener políticas de privacidad:', err);
+            return res.status(500).json({ message: 'Error al obtener políticas de privacidad.' });
+        }
+        res.status(200).json(results);
+    });
+});
 module.exports = router;

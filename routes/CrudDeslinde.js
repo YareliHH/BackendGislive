@@ -97,7 +97,6 @@ router.put('/updatedeslinde/:id', (req, res) => {
     });
 });
 
-
 // Ruta para eliminar (lógicamente) una política de privacidad
 router.put('/deactivate/:id', (req, res) => {
     const { id } = req.params;
@@ -126,7 +125,6 @@ router.get('/getdeslindeactivo', (req, res) => {
     });
 });
 
-
 // Ruta para obtener todas las políticas (activas e inactivas)
 router.get('/getdeslinde', (req, res) => {
     const query = 'SELECT * FROM tbldeslinde_legal ORDER BY version, CAST(version AS DECIMAL(5,2)) ASC';
@@ -143,6 +141,16 @@ router.get('/getdeslinde', (req, res) => {
     });
 });
 
-
+// --- Endpoint para `tbl_deslinde_legal` ---
+router.get('/deslinde/deslinde', (req, res) => {
+    const query = 'SELECT * FROM tbl_deslinde_legal WHERE estado = "activo"';
+    db.query(query, (err, results) => {
+        if (err) {
+            console.error('Error al obtener deslinde legal:', err);
+            return res.status(500).json({ message: 'Error al obtener deslinde legal.' });
+        }
+        res.status(200).json(results);
+    });
+});
 
 module.exports = router;
