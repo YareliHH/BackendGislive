@@ -1,9 +1,6 @@
 // server.js
 
 const express = require('express');
-//const https = require('https');//nuevo
-//const fs = require('fs');//nuevo
-
 const bodyParser = require('body-parser');
 const cors = require('cors'); 
 const Registrer = require('./routes/CRUDregistre.js'); 
@@ -17,24 +14,28 @@ const reportes = require('./routes/Reportes.js');
 
 const app = express();
 
-//const privateKey = fs.readFileSync('C:/xampp/apache/conf/ssl.key/server.key','utf8');
-//const certi = fs.readFileSync('C:/xampp/apache/conf/ssl.crt/server.crt','utf8');
-//const credencials={key:privateKey, cert: certi};
+// Configuración de CORS para permitir solicitudes desde múltiples dominios
+const allowedOrigins = [
+    'https://gisliveboutique.onrender.com',
+    'https://localhost',
+    'https://localhost:3001'
+];
 
-
-// Configuración de CORS para permitir solicitudes desde dominios específicos
 app.use(cors({
-    origin: 'https://gisliveboutique.onrender.com', // Especifica el dominio del frontend
+    origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true); // Permitir el origen
+        } else {
+            callback(new Error('No permitido por CORS')); // Rechazar el origen
+        }
+    },
     credentials: true, // Permitir envío de cookies y credenciales
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Métodos permitidos
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'], // Encabezados permitidos
 }));
 
 // Middleware para responder a solicitudes OPTIONS (preflight) para verificación de CORS
-app.options('*', cors({
-    origin: 'https://gisliveboutique.onrender.com',
-    credentials: true,
-}));
+app.options('*', cors());
 
 // Middleware para analizar JSON en el cuerpo de las solicitudes
 app.use(bodyParser.json());
@@ -49,18 +50,11 @@ app.use('/api', perfil_empresa);
 app.use('/api', redesSociales);
 app.use('/api', reportes);
 
-// Iniciar el servidor por https
+// Iniciar el servidor
 const PORT = process.env.PORT || 3001;
 
-//////////ANTES
 app.listen(PORT, () => {
     console.log(`Servidor ejecutándose en el puerto ${PORT}`);
-    });
+});
 
-//nuevo
-//https.createServer(credencials, app).listen(PORT, () => {
-  //  console.log(Servidor conectado a https en el puerto ${PORT});
-  //});
-  
-
-module.exports = app; // Exporta app si necesitas realizar pruebas
+module.exports = app;
