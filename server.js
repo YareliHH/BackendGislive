@@ -54,7 +54,7 @@ const PORT = process.env.PORT || 3001;
 
 //////////ANTES
 app.listen(PORT, () => {
-    console.log(Servidor ejecutándose en el puerto ${PORT});
+    console.log(`Servidor ejecutándose en el puerto ${PORT}`);
     });
 
 //nuevo
