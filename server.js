@@ -23,19 +23,26 @@ const allowedOrigins = [
 
 app.use(cors({
     origin: (origin, callback) => {
+        // Permitir solicitudes desde orígenes permitidos o desde orígenes nulos (para pruebas locales)
         if (!origin || allowedOrigins.includes(origin)) {
-            callback(null, true); // Permitir el origen
+            callback(null, true);
         } else {
-            callback(new Error('No permitido por CORS')); // Rechazar el origen
+            callback(new Error('No permitido por CORS'));
         }
     },
-    credentials: true, // Permitir envío de cookies y credenciales
+    credentials: true, // Permitir cookies y credenciales
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Métodos permitidos
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'], // Encabezados permitidos
 }));
 
 // Middleware para responder a solicitudes OPTIONS (preflight) para verificación de CORS
-app.options('*', cors());
+app.options('*', (req, res) => {
+    res.header('Access-Control-Allow-Origin', req.headers.origin);
+    res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.sendStatus(200);
+});
 
 // Middleware para analizar JSON en el cuerpo de las solicitudes
 app.use(bodyParser.json());
